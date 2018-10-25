@@ -120,11 +120,11 @@ static void vTask1(void *pvParameters) {
 				Board_UARTPutSTR("\r\n");
 				sscanf(cmd,"%s %d",st,&count);
 
-				if(strstr(cmd, "left ") != NULL){
+				if((strstr(cmd, "left ") != NULL) && (strstr(cmd, "turn") == NULL)){
 					omniCar.move(DIRECTION::LEFT);
 					vTaskDelay(count);
 				}
-				if(strstr(cmd, "right ") != NULL){
+				if((strstr(cmd, "right ") != NULL) && (strstr(cmd, "turn") == NULL)){
 					omniCar.move(DIRECTION::RIGHT);
 					vTaskDelay(count);
 				}
