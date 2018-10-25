@@ -20,6 +20,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "DigitalIoPin.h"
+#include "OmniCar.h"
+#include <cstring>
 
 
 // TODO: insert other definitions and declarations here
@@ -57,6 +59,7 @@ DigitalIoPin pin18(0,12,DigitalIoPin::output,true);//0
 DigitalIoPin pin19(0,14,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin20(0,23,DigitalIoPin::output,true);//3.2
 DigitalIoPin pin21(0,22,DigitalIoPin::output,true);//3.2
+
  */
 //void SCT_Init(void)
 //{
@@ -99,120 +102,49 @@ DigitalIoPin pin21(0,22,DigitalIoPin::output,true);//3.2
 //}
 
 static void vTask1(void *pvParameters) {
-
-	//move left and right
-	DigitalIoPin northPin1(1,10,DigitalIoPin::output,true);
-	DigitalIoPin northPin2(1,9,DigitalIoPin::output,true);
-	DigitalIoPin southPin1(0,29,DigitalIoPin::output,true);
-	DigitalIoPin southPin2(0,9,DigitalIoPin::output,true);
-
-	//move up and down
-	DigitalIoPin eastPin1(0,7,DigitalIoPin::output,true);
-	DigitalIoPin eastPin2(0,6,DigitalIoPin::output,true);
-	DigitalIoPin westPin1(0,5,DigitalIoPin::output,true);
-	DigitalIoPin westPin2(1,8,DigitalIoPin::output,true);
+	OmniCar omniCar;
 	int c = 0;
-	char m[80] = {0};
+	char cmd[80] = {0};
 	int i = 0;
 	int count = 0;
 	char st[80] = {0};
 	while(1){
 		c=Board_UARTGetChar();
 		if(i < 80 && c != EOF){
-			m[i] = c;
+			cmd[i] = c;
 			i++;
 			Board_UARTPutChar(c);
 			if (c == '\r' || c == '\n') {
-				m[i] = '\0';
+				cmd[i] = '\0';
 				i = 0;
 				Board_UARTPutSTR("\r\n");
-				sscanf(m,"%s %d",st,&count);
-				if(m[0]=='l'&&m[1]=='e'&&m[2]=='f'&&m[3]=='t'){
-					northPin1.write(false);
-					northPin2.write(true);
-					southPin1.write(true);
-					southPin2.write(false);
-					vTaskDelay(count);
-					northPin1.write(false);
-					southPin1.write(false);
-					northPin2.write(false);
-					southPin2.write(false);
-				}
-				if(m[0]=='r'&&m[1]=='i'&&m[2]=='g'&&m[3]=='h'&&m[4]=='t'){
-					northPin1.write(true);
-					northPin2.write(false);
-					southPin1.write(false);
-					southPin2.write(true);
+				sscanf(cmd,"%s %d",st,&count);
 
+				if(strstr(cmd, "left ") != NULL){
+					omniCar.move(DIRECTION::LEFT);
 					vTaskDelay(count);
-					northPin1.write(false);
-					southPin1.write(false);
-					northPin2.write(false);
-					southPin2.write(false);
 				}
-				if(m[0]=='u'&&m[1]=='p'){
-					eastPin1.write(false);
-					eastPin2.write(true);
-					westPin1.write(true);
-					westPin2.write(false);
-
+				if(strstr(cmd, "right ") != NULL){
+					omniCar.move(DIRECTION::RIGHT);
 					vTaskDelay(count);
-					eastPin1.write(false);
-					westPin1.write(false);
-					eastPin2.write(false);
-					westPin2.write(false);
 				}
-				if(m[0]=='d'&&m[1]=='o'&&m[2]=='w'&&m[3]=='n'){
-					eastPin1.write(true);
-					eastPin2.write(false);
-					westPin1.write(false);
-					westPin2.write(true);
-
+				if(strstr(cmd, "up ") != NULL){
+					omniCar.move(DIRECTION::UP);
 					vTaskDelay(count);
-					eastPin1.write(false);
-					westPin1.write(false);
-					eastPin2.write(false);
-					westPin2.write(false);
 				}
-				if(m[0]=='c'&&m[1]=='l'&&m[2]=='o'&&m[3]=='c'&&m[4]=='k'&&m[5]=='w'&&m[6]=='i'&&m[7]=='s'&&m[8]=='e'){
-					northPin1.write(true);
-					northPin2.write(false);
-					southPin1.write(true);
-					southPin2.write(false);
-					eastPin1.write(true);
-					eastPin2.write(false);
-					westPin1.write(true);
-					westPin2.write(false);
+				if(strstr(cmd, "down ") != NULL){
+					omniCar.move(DIRECTION::DOWN);
 					vTaskDelay(count);
-					northPin1.write(false);
-					southPin1.write(false);
-					eastPin1.write(false);
-					westPin1.write(false);
-					northPin2.write(false);
-					southPin2.write(false);
-					eastPin2.write(false);
-					westPin2.write(false);
 				}
-				if(m[0]=='c'&&m[1]=='o'&&m[2]=='u'&&m[3]=='n'&&m[4]=='t'&&m[5]=='e'&&m[6]=='r'
-						&&m[7]=='c'&&m[8]=='l'&&m[9]=='o'&&m[10]=='c'&&m[11]=='k'&&m[12]=='w'&&m[13]=='i'&&m[14]=='s'&&m[15]=='e'){
-					northPin1.write(false);
-					northPin2.write(true);
-					southPin1.write(false);
-					southPin2.write(true);
-					eastPin1.write(false);
-					eastPin2.write(true);
-					westPin1.write(false);
-					westPin2.write(true);
+				if(strstr(cmd, "turnleft ") != NULL){
+					omniCar.turn(DIRECTION::LEFT);
 					vTaskDelay(count);
-					northPin1.write(false);
-					southPin1.write(false);
-					eastPin1.write(false);
-					westPin1.write(false);
-					northPin2.write(false);
-					southPin2.write(false);
-					eastPin2.write(false);
-					westPin2.write(false);
 				}
+				if(strstr(cmd, "turnright ") != NULL){
+					omniCar.turn(DIRECTION::RIGHT);
+					vTaskDelay(count);
+				}
+				omniCar.stop();
 			}
 		}
 		vTaskDelay(1);
