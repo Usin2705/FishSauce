@@ -7,22 +7,21 @@
  Description : main definition
 ===============================================================================
  */
-
-#if defined (__USE_LPCOPEN)
-#if defined(NO_BOARD_LIB)
-#include "chip.h"
-#else
-#include "board.h"
-#endif
-#endif
 #include <cr_section_macros.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include <cstring>
 #include "DigitalIoPin.h"
 #include "OmniCar.h"
-#include <cstring>
+#include "Command.h"
+#include "queue.h"
+#include "ITM_write.h"
+#include "string"
+#include "RPSerial.h"
 
+// Queue for gcode command structs
+QueueHandle_t cmdQueue;
 
 // TODO: insert other definitions and declarations here
 /* Sets up system hardware */
@@ -33,6 +32,16 @@ static void prvSetupHardware(void)
 
 	/* Initial LED0 state is off */
 	Board_LED_Set(0, false);
+}
+
+extern "C" {
+
+void vConfigureTimerForRunTimeStats( void ) {
+	Chip_SCT_Init(LPC_SCTSMALL1);
+	LPC_SCTSMALL1->CONFIG = SCT_CONFIG_32BIT_COUNTER;
+	LPC_SCTSMALL1->CTRL_U = SCT_CTRL_PRE_L(255) | SCT_CTRL_CLRCTR_L; // set prescaler to 256 (255 + 1), and start timer
+}
+
 }
 
 /* available pins
@@ -101,72 +110,74 @@ DigitalIoPin pin21(0,22,DigitalIoPin::output,true);//3.2
 //	LPC_SCTLARGE0->MATCHREL[1].L = val;
 //}
 
-static void vTask1(void *pvParameters) {
-	OmniCar omniCar;
+static void vTaskReceive(void *pvParameters) {
 	int c = 0;
-	char cmd[80] = {0};
-	int i = 0;
-	int count = 0;
-	char st[80] = {0};
+	std::string str = "";
+	Command cmd;
+	RPSerial rpSerial;
 	while(1){
-		c=Board_UARTGetChar();
-		if(i < 80 && c != EOF){
-			cmd[i] = c;
-			i++;
-			Board_UARTPutChar(c);
-			if (c == '\r' || c == '\n') {
-				cmd[i] = '\0';
-				i = 0;
+		c = rpSerial.read();
+		if(c != EOF){
+			if (c!= '\r') {
+				Board_UARTPutChar(c);
+				str += (char) c;
+			} else {
 				Board_UARTPutSTR("\r\n");
-				sscanf(cmd,"%s %d",st,&count);
+				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
+				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
+				} else {
+					ITM_write("Cannot Send to the Queue\r\n");
+				}
 
-				if((strstr(cmd, "left ") != NULL) && (strstr(cmd, "turn") == NULL)){
-					omniCar.move(DIRECTION::LEFT);
-					vTaskDelay(count);
-				}
-				if((strstr(cmd, "right ") != NULL) && (strstr(cmd, "turn") == NULL)){
-					omniCar.move(DIRECTION::RIGHT);
-					vTaskDelay(count);
-				}
-				if(strstr(cmd, "up ") != NULL){
-					omniCar.move(DIRECTION::UP);
-					vTaskDelay(count);
-				}
-				if(strstr(cmd, "down ") != NULL){
-					omniCar.move(DIRECTION::DOWN);
-					vTaskDelay(count);
-				}
-				if(strstr(cmd, "turnleft ") != NULL){
-					omniCar.turn(DIRECTION::LEFT);
-					vTaskDelay(count);
-				}
-				if(strstr(cmd, "turnright ") != NULL){
-					omniCar.turn(DIRECTION::RIGHT);
-					vTaskDelay(count);
-				}
-				omniCar.stop();
+				str = "";
 			}
 		}
-		vTaskDelay(1);
 	}
 }
 
-extern "C" {
-
-void vConfigureTimerForRunTimeStats( void ) {
-	Chip_SCT_Init(LPC_SCTSMALL1);
-	LPC_SCTSMALL1->CONFIG = SCT_CONFIG_32BIT_COUNTER;
-	LPC_SCTSMALL1->CTRL_U = SCT_CTRL_PRE_L(255) | SCT_CTRL_CLRCTR_L; // set prescaler to 256 (255 + 1), and start timer
+static void vTaskMotor(void *pvParameters) {
+	OmniCar omniCar;
+	Command cmd;
+	while(1){
+		if(xQueueReceive(cmdQueue, (void*) &cmd, portMAX_DELAY)) {
+			if (strcmp(cmd.cmd_type, "left") == 0) {
+				omniCar.move(DIRECTION::LEFT);
+				vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
+				omniCar.move(DIRECTION::RIGHT);
+				vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
+				omniCar.move(DIRECTION::UP);
+				vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
+				omniCar.move(DIRECTION::DOWN);
+				vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
+				omniCar.turn(DIRECTION::LEFT);
+				vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
+				omniCar.turn(DIRECTION::LEFT);
+				vTaskDelay(cmd.count);
+			}
+			omniCar.stop();
+		}
+	}
 }
 
-}
+
 
 int main(void) {
 	prvSetupHardware();
 	//	SCT_Init();
-	/* LED1 toggle thread */
-	xTaskCreate(vTask1, "vTask1",
-			configMINIMAL_STACK_SIZE*10, NULL, (tskIDLE_PRIORITY + 1UL),
+	cmdQueue = xQueueCreate(10, sizeof(Command));
+
+
+	xTaskCreate(vTaskReceive, "receive",
+			configMINIMAL_STACK_SIZE + 200, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
+	xTaskCreate(vTaskMotor, "motor",
+			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
 	/* Start the scheduler */
