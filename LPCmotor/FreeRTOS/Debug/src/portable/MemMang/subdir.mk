@@ -17,7 +17,7 @@ C_DEPS += \
 src/portable/MemMang/%.o: ../src/portable/MemMang/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: MCU C Compiler'
-	arm-none-eabi-gcc -DDEBUG -D__CODE_RED -DCORE_M3 -D__USE_LPCOPEN -D__LPC15XX__ -D__NEWLIB__ -I"C:\Users\Usin\Desktop\Projects\FishSauce\LPCmotor\FreeRTOS\inc" -I"C:\Users\Usin\Desktop\Projects\FishSauce\LPCmotor\lpc_board_nxp_lpcxpresso_1549\inc" -I"C:\Users\Usin\Desktop\Projects\FishSauce\LPCmotor\lpc_chip_15xx\inc" -I"C:\Users\Usin\Desktop\Projects\FishSauce\LPCmotor\FreeRTOS\src\include" -I"C:\Users\Usin\Desktop\Projects\FishSauce\LPCmotor\FreeRTOS\src\portable\GCC\ARM_CM3" -I"C:\Users\Usin\Desktop\Projects\FishSauce\LPCmotor\FreeRTOS\inc" -O0 -fno-common -g3 -Wall -c -fmessage-length=0 -fno-builtin -ffunction-sections -fdata-sections -mcpu=cortex-m3 -mthumb -D__NEWLIB__ -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	arm-none-eabi-gcc -DDEBUG -D__CODE_RED -DCORE_M3 -D__USE_LPCOPEN -D__LPC15XX__ -D__NEWLIB__ -I"D:\1.Project\NPCXpresso10.2\IoT_project\FishSauce\LPCmotor\FreeRTOS\inc" -I"D:\1.Project\NPCXpresso10.2\IoT_project\FishSauce\LPCmotor\lpc_board_nxp_lpcxpresso_1549\inc" -I"D:\1.Project\NPCXpresso10.2\IoT_project\FishSauce\LPCmotor\lpc_chip_15xx\inc" -I"D:\1.Project\NPCXpresso10.2\IoT_project\FishSauce\LPCmotor\FreeRTOS\src\include" -I"D:\1.Project\NPCXpresso10.2\IoT_project\FishSauce\LPCmotor\FreeRTOS\src\portable\GCC\ARM_CM3" -I"D:\1.Project\NPCXpresso10.2\IoT_project\FishSauce\LPCmotor\FreeRTOS\inc" -O0 -fno-common -g3 -Wall -c -fmessage-length=0 -fno-builtin -ffunction-sections -fdata-sections -mcpu=cortex-m3 -mthumb -D__NEWLIB__ -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

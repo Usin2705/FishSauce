@@ -8,10 +8,10 @@
 #include <OmniCar.h>
 
 OmniCar::OmniCar(){
-	north = new OmniWheel(1,10,1,9);
-	south = new OmniWheel(0,29,0,9);
-	east = new OmniWheel(0,7,0,6);
-	west = new OmniWheel(0,5,1,8);
+	north = new OmniWheel(1,10,1,9, 0, 0, 3);
+	south = new OmniWheel(0,29,0,9, 0, 24, 0);
+	east = new OmniWheel(0,7,0,6, 1, 0, 1);
+	west = new OmniWheel(0,5,1,8, 0, 27, 2);
 }
 
 OmniCar::~OmniCar() {

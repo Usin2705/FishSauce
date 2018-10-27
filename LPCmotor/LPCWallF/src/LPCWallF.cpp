@@ -22,9 +22,90 @@
 
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
-
+volatile uint32_t pulsee;
 // TODO: insert other definitions and declarations here
 /* Sets up system hardware */
+static void prvSetupHardware(void);
+static void vTaskReceive(void *pvParameters);
+static void vTaskMotor(void *pvParameters);
+
+
+int main(void) {
+	prvSetupHardware();
+	//	SCT_Init();
+	cmdQueue = xQueueCreate(10, sizeof(Command));
+
+
+	xTaskCreate(vTaskReceive, "receive",
+			configMINIMAL_STACK_SIZE + 200, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
+	xTaskCreate(vTaskMotor, "motor",
+			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
+	/* Start the scheduler */
+	vTaskStartScheduler();
+
+	/* Should never arrive here */
+	return 1;
+}
+
+static void vTaskReceive(void *pvParameters) {
+	int c = 0;
+	std::string str = "";
+	Command cmd;
+	RPSerial rpSerial;
+	while(1){
+		c = rpSerial.read();
+		if(c != EOF){
+			if (c!= '\r') {
+				Board_UARTPutChar(c);
+				str += (char) c;
+			} else {
+				Board_UARTPutSTR("\r\n");
+				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
+				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
+				} else {
+					ITM_write("Cannot Send to the Queue\r\n");
+				}
+
+				str = "";
+			}
+		}
+	}
+}
+
+static void vTaskMotor(void *pvParameters) {
+	OmniCar omniCar;
+	Command cmd;
+	while(1){
+		if(xQueueReceive(cmdQueue, (void*) &cmd, portMAX_DELAY)) {
+			if (strcmp(cmd.cmd_type, "left") == 0) {
+				omniCar.move(DIRECTION::LEFT);
+	//			vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
+				omniCar.move(DIRECTION::RIGHT);
+	//			vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
+				omniCar.move(DIRECTION::UP);
+	//			vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
+				omniCar.move(DIRECTION::DOWN);
+	//			vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
+				omniCar.turn(DIRECTION::LEFT);
+	//			vTaskDelay(cmd.count);
+			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
+				omniCar.turn(DIRECTION::RIGHT);
+	//			vTaskDelay(cmd.count);
+			}
+			if(pulsee == 0)
+				omniCar.stop();
+		}
+	}
+}
+
 static void prvSetupHardware(void)
 {
 	SystemCoreClockUpdate();
@@ -32,9 +113,62 @@ static void prvSetupHardware(void)
 
 	/* Initial LED0 state is off */
 	Board_LED_Set(0, false);
+
+
+	/* Enable interrupt in the NVIC */
+//	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);	//Xmin
+//	NVIC_EnableIRQ(PIN_INT0_IRQn);
+//
+//	NVIC_ClearPendingIRQ(PIN_INT1_IRQn);	//Xmax
+//	NVIC_EnableIRQ(PIN_INT1_IRQn);
+//
+//	NVIC_ClearPendingIRQ(PIN_INT2_IRQn);	//Ymin
+//	NVIC_EnableIRQ(PIN_INT2_IRQn);
+
+
 }
 
 extern "C" {
+
+//void PIN_INT0_IRQHandler(void)			//Xmin limit
+//{
+//	portBASE_TYPE xHigherPriorityWoken = pdFALSE;
+//	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
+//	XRIT_count = 0;
+//	if(xSemaphoreGiveFromISR(limXmin_sem, &xHigherPriorityWoken) == pdTRUE) {
+//		//do sth to notify
+//	}
+//	Board_LED_Toggle(0);
+//}
+//
+//void PIN_INT1_IRQHandler(void)			//Xmax limit
+//{
+//	portBASE_TYPE xHigherPriorityWoken = pdFALSE;
+//	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(1));
+//	XRIT_count = 0;
+//	if(xSemaphoreGiveFromISR(limXmax_sem, &xHigherPriorityWoken) == pdTRUE) {
+//		//do sth to notify
+//	}
+//	Board_LED_Toggle(1);
+//}
+//
+//void PIN_INT2_IRQHandler(void)			//Ymin limit
+//{
+//	portBASE_TYPE xHigherPriorityWoken = pdFALSE;
+//	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(2));
+//	YRIT_count = 0;
+//	if(xSemaphoreGiveFromISR(limYmin_sem, &xHigherPriorityWoken) == pdTRUE) {
+//		//do sth to notify
+//	}
+//	Board_LED_Toggle(2);
+//}
+
+void PIN_INT3_IRQHandler(void)			//Ymax limit
+{
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
+	pulsee--;
+	Board_LED_Toggle(2);
+}
 
 void vConfigureTimerForRunTimeStats( void ) {
 	Chip_SCT_Init(LPC_SCTSMALL1);
@@ -110,79 +244,3 @@ DigitalIoPin pin21(0,22,DigitalIoPin::output,true);//3.2
 //	LPC_SCTLARGE0->MATCHREL[1].L = val;
 //}
 
-static void vTaskReceive(void *pvParameters) {
-	int c = 0;
-	std::string str = "";
-	Command cmd;
-	RPSerial rpSerial;
-	while(1){
-		c = rpSerial.read();
-		if(c != EOF){
-			if (c!= '\r') {
-				Board_UARTPutChar(c);
-				str += (char) c;
-			} else {
-				Board_UARTPutSTR("\r\n");
-				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
-				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
-				} else {
-					ITM_write("Cannot Send to the Queue\r\n");
-				}
-
-				str = "";
-			}
-		}
-	}
-}
-
-static void vTaskMotor(void *pvParameters) {
-	OmniCar omniCar;
-	Command cmd;
-	while(1){
-		if(xQueueReceive(cmdQueue, (void*) &cmd, portMAX_DELAY)) {
-			if (strcmp(cmd.cmd_type, "left") == 0) {
-				omniCar.move(DIRECTION::LEFT);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
-				omniCar.move(DIRECTION::RIGHT);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
-				omniCar.move(DIRECTION::UP);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
-				omniCar.move(DIRECTION::DOWN);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
-				omniCar.turn(DIRECTION::LEFT);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
-				omniCar.turn(DIRECTION::LEFT);
-				vTaskDelay(cmd.count);
-			}
-			omniCar.stop();
-		}
-	}
-}
-
-
-
-int main(void) {
-	prvSetupHardware();
-	//	SCT_Init();
-	cmdQueue = xQueueCreate(10, sizeof(Command));
-
-
-	xTaskCreate(vTaskReceive, "receive",
-			configMINIMAL_STACK_SIZE + 200, NULL, (tskIDLE_PRIORITY + 1UL),
-			(TaskHandle_t *) NULL);
-
-	xTaskCreate(vTaskMotor, "motor",
-			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
-			(TaskHandle_t *) NULL);
-
-	/* Start the scheduler */
-	vTaskStartScheduler();
-
-	/* Should never arrive here */
-	return 1;
-}

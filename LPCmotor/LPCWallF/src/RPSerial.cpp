@@ -36,13 +36,13 @@ void LPC_UARTHNDLR(void)
 
 RPSerial::RPSerial() {
 	/* UART signals on pins PIO0_13 (FUNC0, U0_TXD) and PIO0_18 (FUNC0, U0_RXD) */
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 19, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 29, (IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // RTS (for direction control)
 
 	/* UART signal muxing via SWM */
-	Chip_SWM_MovablePortPinAssign(SWM_UART2_RXD_I, 1, 3);
-	Chip_SWM_MovablePortPinAssign(SWM_UART2_TXD_O, 0, 10);
+	Chip_SWM_MovablePortPinAssign(SWM_UART1_RXD_I, 1, 3);
+	Chip_SWM_MovablePortPinAssign(SWM_UART1_TXD_O, 0, 10);
 	Chip_SWM_MovablePortPinAssign(SWM_UART1_RTS_O, 0, 29);
 
 
