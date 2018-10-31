@@ -19,6 +19,7 @@
 #include "ITM_write.h"
 #include "string"
 #include "RPSerial.h"
+#include "HCSerial.h"
 
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
@@ -26,19 +27,24 @@ volatile uint32_t pulsee;
 // TODO: insert other definitions and declarations here
 /* Sets up system hardware */
 static void prvSetupHardware(void);
-static void vTaskReceive(void *pvParameters);
+//static void vTaskReceiveRP(void *pvParameters);
+static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 
 
 int main(void) {
 	prvSetupHardware();
 	//	SCT_Init();
-	cmdQueue = xQueueCreate(10, sizeof(Command));
+	cmdQueue = xQueueCreate(4, sizeof(Command));
 
 
-	xTaskCreate(vTaskReceive, "receive",
-			configMINIMAL_STACK_SIZE + 200, NULL, (tskIDLE_PRIORITY + 1UL),
-			(TaskHandle_t *) NULL);
+//	xTaskCreate(vTaskReceiveRP, "receiveRP",
+//			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
+//			(TaskHandle_t *) NULL);
+
+	xTaskCreate(vTaskReceiveHC, "receiveHC",
+				configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
+				(TaskHandle_t *) NULL);
 
 	xTaskCreate(vTaskMotor, "motor",
 			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
@@ -51,13 +57,41 @@ int main(void) {
 	return 1;
 }
 
-static void vTaskReceive(void *pvParameters) {
+/*
+static void vTaskReceiveRP(void *pvParameters) {
 	int c = 0;
 	std::string str = "";
 	Command cmd;
 	RPSerial rpSerial;
 	while(1){
 		c = rpSerial.read();
+		if(c != EOF){
+			if (c!= '\r') {
+				Board_UARTPutChar(c);
+				str += (char) c;
+			} else {
+				Board_UARTPutSTR("\r\n");
+				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
+				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
+				} else {
+					ITM_write("Cannot Send to the Queue\r\n");
+				}
+
+				str = "";
+			}
+		}
+	}
+}
+*/
+
+static void vTaskReceiveHC(void *pvParameters) {
+	int c = 0;
+	std::string str = "";
+	Command cmd;
+	HCSerial hcSerial;
+	hcSerial.write("AT+C001", strlen("AT+C001"));
+	while(1){
+		c = hcSerial.read();
 		if(c != EOF){
 			if (c!= '\r') {
 				Board_UARTPutChar(c);
@@ -83,22 +117,22 @@ static void vTaskMotor(void *pvParameters) {
 		if(xQueueReceive(cmdQueue, (void*) &cmd, portMAX_DELAY)) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
 				omniCar.move(DIRECTION::LEFT);
-	//			vTaskDelay(cmd.count);
+				vTaskDelay(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
 				omniCar.move(DIRECTION::RIGHT);
-	//			vTaskDelay(cmd.count);
+				vTaskDelay(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
 				omniCar.move(DIRECTION::UP);
-	//			vTaskDelay(cmd.count);
+				vTaskDelay(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
 				omniCar.move(DIRECTION::DOWN);
-	//			vTaskDelay(cmd.count);
+				vTaskDelay(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
 				omniCar.turn(DIRECTION::LEFT);
-	//			vTaskDelay(cmd.count);
+				vTaskDelay(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
 				omniCar.turn(DIRECTION::RIGHT);
-	//			vTaskDelay(cmd.count);
+				vTaskDelay(cmd.count);
 			}
 			if(pulsee == 0)
 				omniCar.stop();

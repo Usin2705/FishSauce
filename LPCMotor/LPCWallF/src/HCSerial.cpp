@@ -4,12 +4,12 @@
  *  Created on: 10.2.2016
  *      Author: krl
  */
-#include "RPSerial.h"
+#include "HCSerial.h"
 
 
-#define LPC_USART       LPC_USART1
-#define LPC_IRQNUM      UART1_IRQn
-#define LPC_UARTHNDLR   UART1_IRQHandler
+#define LPC_USART       LPC_USART2
+#define LPC_IRQNUM      UART2_IRQn
+#define LPC_UARTHNDLR   UART2_IRQHandler
 
 /* Enable this define to use integer clocking instead of the fractional baud
    rate generator */
@@ -34,15 +34,15 @@ void LPC_UARTHNDLR(void)
 
 }
 
-RPSerial::RPSerial() {
+HCSerial::HCSerial() {
 	/* UART signals on pins PIO0_13 (FUNC0, U0_TXD) and PIO0_18 (FUNC0, U0_RXD) */
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
 	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
 	//Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 29, (IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // RTS (for direction control)
 
 	/* UART signal muxing via SWM */
-	Chip_SWM_MovablePortPinAssign(SWM_UART1_RXD_I, 1, 3); 	// D6
-	Chip_SWM_MovablePortPinAssign(SWM_UART1_TXD_O, 0, 10);	// D4
+	Chip_SWM_MovablePortPinAssign(SWM_UART2_RXD_I, 1, 3);  // D6
+	Chip_SWM_MovablePortPinAssign(SWM_UART2_TXD_O, 0, 10); // D4
 	//Chip_SWM_MovablePortPinAssign(SWM_UART1_RTS_O, 0, 29);
 
 
@@ -56,7 +56,7 @@ RPSerial::RPSerial() {
 
 #else
 	/* Use 128x expected UART baud rate for fractional baud mode. */
-	Chip_Clock_SetUARTBaseClockRate((115200 * 128), true);
+	Chip_Clock_SetUARTBaseClockRate((9600 * 128), true);
 #endif
 
 	/* Setup UART */
@@ -91,39 +91,39 @@ RPSerial::RPSerial() {
 	NVIC_EnableIRQ(LPC_IRQNUM);
 }
 
-RPSerial::~RPSerial() {
+HCSerial::~HCSerial() {
 	/* DeInitialize UART peripheral */
 	NVIC_DisableIRQ(LPC_IRQNUM);
 	Chip_UART_DeInit(LPC_USART);
 }
 
-int RPSerial::available() {
+int HCSerial::available() {
 	return RingBuffer_GetCount(&rxring);
 }
 
-void RPSerial::begin(int speed) {
+void HCSerial::begin(int speed) {
 	Chip_UART_SetBaud(LPC_USART, speed);
 
 }
 
-int RPSerial::read() {
+int HCSerial::read() {
 	uint8_t byte;
 	int value;
 	value = Chip_UART_ReadRB(LPC_USART, &rxring, &byte, 1);
 	if(value > 0) return (byte);
 	return -1;
 }
-int RPSerial::write(const char* buf, int len) {
+int HCSerial::write(const char* buf, int len) {
 	Chip_UART_SendRB(LPC_USART, &txring, buf, len);
 	return len;
 }
 
-int RPSerial::print(int val, int format) {
+int HCSerial::print(int val, int format) {
 	uint8_t byte = val;
 	Chip_UART_SendRB(LPC_USART, &txring, &byte, 1);
 	return (0);
 }
 
-void RPSerial::flush() {
+void HCSerial::flush() {
 	while(RingBuffer_GetCount(&txring)>0) __WFI();
 }

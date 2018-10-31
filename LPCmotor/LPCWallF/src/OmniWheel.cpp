@@ -15,6 +15,7 @@ OmniWheel::OmniWheel(uint8_t portPin1, uint8_t pinPin1, uint8_t portPin2, uint8_
 {
 	mIsClockwise = true;
 	pulse = 1000;
+
 	/* Initialize PININT driver */
 	Chip_PININT_Init(LPC_GPIO_PIN_INT);
 	/* Enable PININT clock */
