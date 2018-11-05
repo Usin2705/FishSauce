@@ -8,10 +8,10 @@
 #include <OmniCar.h>
 
 OmniCar::OmniCar(){
-	north = new OmniWheel(1,10,1,9, 0, 0, 3);
-	south = new OmniWheel(0,29,0,9, 0, 24, 0);
-	east = new OmniWheel(0,7,0,6, 1, 0, 1);
-	west = new OmniWheel(0,5,1,8, 0, 27, 2);
+	north = new OmniWheel(1, 10, 1, 9, 0, 0, 0);
+	south = new OmniWheel(0, 29, 0, 9, 0, 23, 1);
+	east = new OmniWheel(0, 7, 0, 6, 1, 0, 2);
+	west = new OmniWheel(0, 5, 1, 8, 0, 22, 3);
 }
 
 OmniCar::~OmniCar() {
@@ -21,42 +21,42 @@ OmniCar::~OmniCar() {
 	delete west;
 }
 
-void OmniCar::move(DIRECTION direction) {
+void OmniCar::move(DIRECTION direction, uint32_t pulse) {
 	switch (direction) {
 	case UP:
-		east->rotate(!ISCLOCKWISE);
-		west->rotate(ISCLOCKWISE);
+		east->rotate(!ISCLOCKWISE, pulse);
+		west->rotate(ISCLOCKWISE, pulse);
 		break;
 	case DOWN:
-		east->rotate(ISCLOCKWISE);
-		west->rotate(!ISCLOCKWISE);
+		east->rotate(ISCLOCKWISE, pulse);
+		west->rotate(!ISCLOCKWISE, pulse);
 		break;
 	case LEFT:
-		north->rotate(!ISCLOCKWISE);
-		south->rotate(ISCLOCKWISE);
+		north->rotate(!ISCLOCKWISE, pulse);
+		south->rotate(ISCLOCKWISE, pulse);
 		break;
 	case RIGHT:
-		north->rotate(ISCLOCKWISE);
-		south->rotate(!ISCLOCKWISE);
+		north->rotate(ISCLOCKWISE, pulse);
+		south->rotate(!ISCLOCKWISE, pulse);
 		break;
 	default:
 		break;
 	}
 }
 
-void OmniCar::turn(DIRECTION direction) {
+void OmniCar::turn(DIRECTION direction, uint32_t pulse) {
 	switch (direction) {
 	case LEFT:
-		east->rotate(ISCLOCKWISE);
-		west->rotate(ISCLOCKWISE);
-		north->rotate(ISCLOCKWISE);
-		south->rotate(ISCLOCKWISE);
+		east->rotate(ISCLOCKWISE, pulse);
+		west->rotate(ISCLOCKWISE, pulse);
+		north->rotate(ISCLOCKWISE, pulse);
+		south->rotate(ISCLOCKWISE, pulse);
 		break;
 	case RIGHT:
-		east->rotate(!ISCLOCKWISE);
-		west->rotate(!ISCLOCKWISE);
-		north->rotate(!ISCLOCKWISE);
-		south->rotate(!ISCLOCKWISE);
+		east->rotate(!ISCLOCKWISE, pulse);
+		west->rotate(!ISCLOCKWISE, pulse);
+		north->rotate(!ISCLOCKWISE, pulse);
+		south->rotate(!ISCLOCKWISE, pulse);
 		break;
 	default:
 		break;

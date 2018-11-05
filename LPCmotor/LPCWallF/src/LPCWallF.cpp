@@ -23,7 +23,10 @@
 
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
-volatile uint32_t pulsee;
+volatile uint32_t pulse_north = 100;
+volatile uint32_t pulse_south = 100;
+volatile uint32_t pulse_east = 100;
+volatile uint32_t pulse_west = 100;
 // TODO: insert other definitions and declarations here
 /* Sets up system hardware */
 static void prvSetupHardware(void);
@@ -38,13 +41,13 @@ int main(void) {
 	cmdQueue = xQueueCreate(4, sizeof(Command));
 
 
-//	xTaskCreate(vTaskReceiveRP, "receiveRP",
-//			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
-//			(TaskHandle_t *) NULL);
+	//	xTaskCreate(vTaskReceiveRP, "receiveRP",
+	//			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
+	//			(TaskHandle_t *) NULL);
 
 	xTaskCreate(vTaskReceiveHC, "receiveHC",
-				configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
-				(TaskHandle_t *) NULL);
+			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
 
 	xTaskCreate(vTaskMotor, "motor",
 			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
@@ -82,7 +85,7 @@ static void vTaskReceiveRP(void *pvParameters) {
 		}
 	}
 }
-*/
+ */
 
 static void vTaskReceiveHC(void *pvParameters) {
 	int c = 0;
@@ -113,30 +116,32 @@ static void vTaskReceiveHC(void *pvParameters) {
 static void vTaskMotor(void *pvParameters) {
 	OmniCar omniCar;
 	Command cmd;
+	omniCar.move(DIRECTION::LEFT, 200);
+	vTaskDelay(500);
+
 	while(1){
-		if(xQueueReceive(cmdQueue, (void*) &cmd, portMAX_DELAY)) {
-			if (strcmp(cmd.cmd_type, "left") == 0) {
-				omniCar.move(DIRECTION::LEFT);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
-				omniCar.move(DIRECTION::RIGHT);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
-				omniCar.move(DIRECTION::UP);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
-				omniCar.move(DIRECTION::DOWN);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
-				omniCar.turn(DIRECTION::LEFT);
-				vTaskDelay(cmd.count);
-			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
-				omniCar.turn(DIRECTION::RIGHT);
-				vTaskDelay(cmd.count);
-			}
-			if(pulsee == 0)
-				omniCar.stop();
-		}
+		//		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
+		//			if (strcmp(cmd.cmd_type, "left") == 0) {
+		//				omniCar.move(DIRECTION::LEFT);
+		//				vTaskDelay(cmd.count);
+		//			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
+		//				omniCar.move(DIRECTION::RIGHT);
+		//				vTaskDelay(cmd.count);
+		//			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
+		//				omniCar.move(DIRECTION::UP);
+		//				vTaskDelay(cmd.count);
+		//			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
+		//				omniCar.move(DIRECTION::DOWN);
+		//				vTaskDelay(cmd.count);
+		//			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
+		//				omniCar.turn(DIRECTION::LEFT);
+		//				vTaskDelay(cmd.count);
+		//			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
+		//				omniCar.turn(DIRECTION::RIGHT);
+		//				vTaskDelay(cmd.count);
+		//			}
+		//
+		//		}
 	}
 }
 
@@ -144,64 +149,41 @@ static void prvSetupHardware(void)
 {
 	SystemCoreClockUpdate();
 	Board_Init();
-
 	/* Initial LED0 state is off */
 	Board_LED_Set(0, false);
-
-
-	/* Enable interrupt in the NVIC */
-//	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);	//Xmin
-//	NVIC_EnableIRQ(PIN_INT0_IRQn);
-//
-//	NVIC_ClearPendingIRQ(PIN_INT1_IRQn);	//Xmax
-//	NVIC_EnableIRQ(PIN_INT1_IRQn);
-//
-//	NVIC_ClearPendingIRQ(PIN_INT2_IRQn);	//Ymin
-//	NVIC_EnableIRQ(PIN_INT2_IRQn);
-
-
+	/* Initialize PININT driver */
+	Chip_PININT_Init(LPC_GPIO_PIN_INT);
+	/* Enable PININT clock */
+	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
+	/* Reset the PININT block */
+	Chip_SYSCTL_PeriphReset(RESET_PININT);
 }
 
 extern "C" {
 
-//void PIN_INT0_IRQHandler(void)			//Xmin limit
-//{
-//	portBASE_TYPE xHigherPriorityWoken = pdFALSE;
-//	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
-//	XRIT_count = 0;
-//	if(xSemaphoreGiveFromISR(limXmin_sem, &xHigherPriorityWoken) == pdTRUE) {
-//		//do sth to notify
-//	}
-//	Board_LED_Toggle(0);
-//}
-//
-//void PIN_INT1_IRQHandler(void)			//Xmax limit
-//{
-//	portBASE_TYPE xHigherPriorityWoken = pdFALSE;
-//	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(1));
-//	XRIT_count = 0;
-//	if(xSemaphoreGiveFromISR(limXmax_sem, &xHigherPriorityWoken) == pdTRUE) {
-//		//do sth to notify
-//	}
-//	Board_LED_Toggle(1);
-//}
-//
-//void PIN_INT2_IRQHandler(void)			//Ymin limit
-//{
-//	portBASE_TYPE xHigherPriorityWoken = pdFALSE;
-//	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(2));
-//	YRIT_count = 0;
-//	if(xSemaphoreGiveFromISR(limYmin_sem, &xHigherPriorityWoken) == pdTRUE) {
-//		//do sth to notify
-//	}
-//	Board_LED_Toggle(2);
-//}
-
-void PIN_INT3_IRQHandler(void)			//Ymax limit
+void PIN_INT0_IRQHandler(void)			//north
+{
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
+	if(pulse_north > 0)
+		pulse_north--;
+}
+void PIN_INT1_IRQHandler(void)			//south
+{
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(1));
+	if(pulse_south > 0)
+		pulse_south--;
+}
+void PIN_INT2_IRQHandler(void)			//east
+{
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(2));
+	if(pulse_east > 0)
+		pulse_east--;
+}
+void PIN_INT3_IRQHandler(void)			//west
 {
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
-	pulsee--;
-	Board_LED_Toggle(2);
+	if(pulse_west > 0)
+		pulse_west--;
 }
 
 void vConfigureTimerForRunTimeStats( void ) {
@@ -223,19 +205,23 @@ void vConfigureTimerForRunTimeStats( void ) {
 	DigitalIoPin westPin1(0,5,DigitalIoPin::output,true);
 	DigitalIoPin westPin2(1,8,DigitalIoPin::output,true);
 
+	DigitalIoPin intsouthpin20(0,23,DigitalIoPin::output,true);//3.2
+	DigitalIoPin intwestpin21(0,22,DigitalIoPin::output,true);//3.2
+	DigitalIoPin inteastpin15(1,0,DigitalIoPin::output,true);//2.5
+	intnorth  0 0
+
 DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin11(0,10,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin12(1,3,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
-DigitalIoPin pin15(1,0,DigitalIoPin::output,true);//2.5
+
 DigitalIoPin pin16(0,27,DigitalIoPin::output,true);//0
 DigitalIoPin pin17(0,28,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin18(0,12,DigitalIoPin::output,true);//0
 DigitalIoPin pin19(0,14,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin20(0,23,DigitalIoPin::output,true);//3.2
-DigitalIoPin pin21(0,22,DigitalIoPin::output,true);//3.2
+
 
  */
 //void SCT_Init(void)
