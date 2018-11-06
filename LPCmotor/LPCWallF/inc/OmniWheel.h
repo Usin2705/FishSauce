@@ -21,8 +21,8 @@
 
 class OmniWheel {
 public:
-	OmniWheel(uint8_t portPin1, uint8_t pinPin1, uint8_t portPin2, uint8_t pinPin2, uint8_t portint, uint8_t pinint, uint8_t index);
-	void rotate(bool isClockwise);
+	OmniWheel(int portPin1, int pinPin1, int portPin2, int pinPin2, int portint, int pinint, int index);
+	void rotate(bool isClockwise, uint32_t pulse);
 	void stop();
 
 	bool getDirection();
@@ -32,7 +32,6 @@ public:
 private:
 	DigitalIoPin pin1;
 	DigitalIoPin pin2;
-	DigitalIoPin intpin;
 	bool mIsClockwise;
 	uint32_t pulse;
 };

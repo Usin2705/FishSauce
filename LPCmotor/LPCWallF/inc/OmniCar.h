@@ -18,8 +18,8 @@ public:
 	OmniCar();
 	virtual ~OmniCar();
 
-	void move(DIRECTION direction);
-	void turn(DIRECTION direction);
+	void move(DIRECTION direction, uint32_t pulse);
+	void turn(DIRECTION direction, uint32_t pulse);
 	void stop();
 
 private:
