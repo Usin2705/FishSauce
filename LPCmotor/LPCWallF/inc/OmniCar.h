@@ -12,15 +12,18 @@
 #define ISCLOCKWISE true
 
 typedef enum {UP,DOWN,LEFT,RIGHT} DIRECTION;
+typedef enum {NORTH, SOUTH, EAST, WEST} WHEEL;
 
 class OmniCar {
 public:
 	OmniCar();
 	virtual ~OmniCar();
 
-	void move(DIRECTION direction, uint32_t pulse);
-	void turn(DIRECTION direction, uint32_t pulse);
-	void stop();
+	void move(DIRECTION direction);
+	void indimove(WHEEL wheel, bool dir);
+	void turn(DIRECTION direction);
+	void stopWheel(WHEEL wheel);
+	void setWheelEnable(WHEEL wheel);
 
 private:
 	OmniWheel *north;

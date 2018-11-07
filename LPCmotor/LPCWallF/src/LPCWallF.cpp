@@ -20,47 +20,47 @@
 #include "string"
 #include "RPSerial.h"
 #include "HCSerial.h"
+#define USEHC 1
 
+// TODO: global variables here
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
-volatile uint32_t pulse_north = 100;
-volatile uint32_t pulse_south = 100;
-volatile uint32_t pulse_east = 100;
-volatile uint32_t pulse_west = 100;
-// TODO: insert other definitions and declarations here
-/* Sets up system hardware */
-static void prvSetupHardware(void);
+volatile uint32_t pulse_north = 0;
+volatile uint32_t pulse_south = 0;
+volatile uint32_t pulse_east = 0;
+volatile uint32_t pulse_west = 0;
+OmniCar omniCar;
+
+// TODO: definitions and declarations here
 //static void vTaskReceiveRP(void *pvParameters);
 static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
+void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
 
 
 int main(void) {
-	prvSetupHardware();
-	//	SCT_Init();
 	cmdQueue = xQueueCreate(4, sizeof(Command));
 
-
-	//	xTaskCreate(vTaskReceiveRP, "receiveRP",
-	//			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
-	//			(TaskHandle_t *) NULL);
-
+#if !USEHC
+	xTaskCreate(vTaskReceiveRP, "receiveRP",
+			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+#endif
+#if USEHC
 	xTaskCreate(vTaskReceiveHC, "receiveHC",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
-
+#endif
 	xTaskCreate(vTaskMotor, "motor",
 			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
-	/* Start the scheduler */
-	vTaskStartScheduler();
 
-	/* Should never arrive here */
+	vTaskStartScheduler();
 	return 1;
 }
 
-/*
+#if !USEHC
 static void vTaskReceiveRP(void *pvParameters) {
 	int c = 0;
 	std::string str = "";
@@ -85,8 +85,8 @@ static void vTaskReceiveRP(void *pvParameters) {
 		}
 	}
 }
- */
-
+#endif
+#if USEHC
 static void vTaskReceiveHC(void *pvParameters) {
 	int c = 0;
 	std::string str = "";
@@ -112,51 +112,57 @@ static void vTaskReceiveHC(void *pvParameters) {
 		}
 	}
 }
+#endif
 
 static void vTaskMotor(void *pvParameters) {
-	OmniCar omniCar;
+
 	Command cmd;
-	omniCar.move(DIRECTION::LEFT, 200);
-	vTaskDelay(500);
 
 	while(1){
-		//		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
-		//			if (strcmp(cmd.cmd_type, "left") == 0) {
-		//				omniCar.move(DIRECTION::LEFT);
-		//				vTaskDelay(cmd.count);
-		//			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
-		//				omniCar.move(DIRECTION::RIGHT);
-		//				vTaskDelay(cmd.count);
-		//			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
-		//				omniCar.move(DIRECTION::UP);
-		//				vTaskDelay(cmd.count);
-		//			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
-		//				omniCar.move(DIRECTION::DOWN);
-		//				vTaskDelay(cmd.count);
-		//			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
-		//				omniCar.turn(DIRECTION::LEFT);
-		//				vTaskDelay(cmd.count);
-		//			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
-		//				omniCar.turn(DIRECTION::RIGHT);
-		//				vTaskDelay(cmd.count);
-		//			}
-		//
-		//		}
+		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
+			if (strcmp(cmd.cmd_type, "left") == 0) {
+				carindimove(omniCar, NORTH, CLOCKWISE, 100);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
+			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
+			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
+				carindimove(omniCar, EAST, CLOCKWISE, 100);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, 100);
+			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, WEST, CLOCKWISE, 100);
+			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
+				carindimove(omniCar, NORTH, CLOCKWISE, 100);
+				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
+				carindimove(omniCar, EAST, CLOCKWISE, 100);
+				carindimove(omniCar, WEST, CLOCKWISE, 100);
+			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, 100);
+			}
+		}
 	}
 }
 
-static void prvSetupHardware(void)
-{
-	SystemCoreClockUpdate();
-	Board_Init();
-	/* Initial LED0 state is off */
-	Board_LED_Set(0, false);
-	/* Initialize PININT driver */
-	Chip_PININT_Init(LPC_GPIO_PIN_INT);
-	/* Enable PININT clock */
-	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
-	/* Reset the PININT block */
-	Chip_SYSCTL_PeriphReset(RESET_PININT);
+void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse) {
+	switch(wheel) {
+	case NORTH:
+		pulse_north = pulse;
+		break;
+	case SOUTH:
+		pulse_south = pulse;
+		break;
+	case EAST:
+		pulse_east = pulse;
+		break;
+	case WEST:
+		pulse_west = pulse;
+		break;
+	}
+	omnicar.indimove(wheel, dir);
 }
 
 extern "C" {
@@ -164,26 +170,35 @@ extern "C" {
 void PIN_INT0_IRQHandler(void)			//north
 {
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
-	if(pulse_north > 0)
+	if(pulse_north > 0) {
 		pulse_north--;
+	}
+	else omniCar.stopWheel(NORTH);
 }
 void PIN_INT1_IRQHandler(void)			//south
 {
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(1));
-	if(pulse_south > 0)
+	if(pulse_south > 0) {
 		pulse_south--;
+
+	}
+	else omniCar.stopWheel(SOUTH);
 }
 void PIN_INT2_IRQHandler(void)			//east
 {
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(2));
-	if(pulse_east > 0)
+	if(pulse_east > 0) {
 		pulse_east--;
+	}
+	else omniCar.stopWheel(EAST);
 }
 void PIN_INT3_IRQHandler(void)			//west
 {
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
-	if(pulse_west > 0)
+	if(pulse_west > 0) {
 		pulse_west--;
+	}
+	else omniCar.stopWheel(WEST);
 }
 
 void vConfigureTimerForRunTimeStats( void ) {

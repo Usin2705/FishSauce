@@ -12,7 +12,7 @@ pin1(portPin1, pinPin1, DigitalIoPin::output, true),
 pin2(portPin2, pinPin2, DigitalIoPin::output, true)
 {
 	mIsClockwise = true;
-	pulse = 0;
+	enable = false;
 	/* Set pin back to GPIO (on some boards may have been changed to something
 		   else by Board_Init()) */
 	Chip_IOCON_PinMuxSet(LPC_IOCON, portint, pinint,
@@ -53,22 +53,22 @@ pin2(portPin2, pinPin2, DigitalIoPin::output, true)
  * (probably need it in counting the hall signal)
  *
  */
-void OmniWheel::rotate(bool isClockwise, uint32_t pulse) {
+void OmniWheel::rotate(bool isClockwise) {
 	mIsClockwise = isClockwise;
-	this->pulse = pulse;
-	if(this->pulse > 0) {
+	if(this->enable) {
 		pin1.write(isClockwise);
 		pin2.write(!isClockwise);
 	}
 }
 
 bool OmniWheel::getDirection() {return mIsClockwise;}
-
+void OmniWheel::setEnable() {this->enable = true;}
 /*
  * Stop the rotation of the wheel by set both pins
  * to false
  */
 void OmniWheel::stop() {
+	this->enable = false;
 	pin1.write(false);
 	pin2.write(false);
 }
