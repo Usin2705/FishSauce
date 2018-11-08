@@ -20,7 +20,7 @@
 #include "string"
 #include "RPSerial.h"
 #include "HCSerial.h"
-#define USEHC 1
+#define USEHC 0
 
 // TODO: global variables here
 // Queue for gcode command structs
@@ -32,14 +32,18 @@ volatile uint32_t pulse_west = 0;
 OmniCar omniCar;
 
 // TODO: definitions and declarations here
-//static void vTaskReceiveRP(void *pvParameters);
+static void vTaskReceiveRP(void *pvParameters);
 static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
+void SCT_init();
+void xMove(int pos);
 
 
 int main(void) {
 	cmdQueue = xQueueCreate(4, sizeof(Command));
+
+	SCT_init();
 
 #if !USEHC
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
@@ -123,25 +127,27 @@ static void vTaskMotor(void *pvParameters) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
 				carindimove(omniCar, NORTH, CLOCKWISE, 100);
 				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
+				xMove(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
 				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
 				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
+				xMove(cmd.count);
 			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
-				carindimove(omniCar, EAST, CLOCKWISE, 100);
-				carindimove(omniCar, WEST, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
-				carindimove(omniCar, EAST, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, WEST, CLOCKWISE, 100);
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
-				carindimove(omniCar, NORTH, CLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
-				carindimove(omniCar, EAST, CLOCKWISE, 100);
-				carindimove(omniCar, WEST, CLOCKWISE, 100);
+				carindimove(omniCar, NORTH, CLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, CLOCKWISE, cmd.count);
+				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
-				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, EAST, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, WEST, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			}
 		}
 	}
@@ -162,7 +168,51 @@ void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse) {
 		pulse_west = pulse;
 		break;
 	}
-	omnicar.indimove(wheel, dir);
+	omnicar.indiMove(wheel, dir);
+}
+
+void SCT_init(){
+	Chip_SCT_Init(LPC_SCTLARGE0);
+	Chip_SCT_Init(LPC_SCTLARGE1);
+
+	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O, 0,28); //Servox
+	Chip_SWM_MovablePortPinAssign(SWM_SCT1_OUT0_O, 0,14); //Servoy
+
+	LPC_SCTLARGE0->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
+
+	LPC_SCTLARGE0->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
+
+	LPC_SCTLARGE0->MATCHREL[0].L = 20000; // match 0 @ 10/1MHz = 10 usec (100 kHz PWM freq) (1MHz/20000)
+	LPC_SCTLARGE0->MATCHREL[1].L = 1600; // match 1 used for duty cycle (in 10 steps)
+	LPC_SCTLARGE0->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
+	LPC_SCTLARGE0->EVENT[0].CTRL = (1 << 12); // match 0 condition only
+	LPC_SCTLARGE0->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
+	LPC_SCTLARGE0->EVENT[1].CTRL = (1 << 0) | (1 << 12); // match 1 condition only
+	LPC_SCTLARGE0->OUT[0].SET = (1 << 0); // event 0 will set SCTx_OUT0
+	LPC_SCTLARGE0->OUT[0].CLR = (1 << 1); // event 1 will clear SCTx_OUT0
+	LPC_SCTLARGE0->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
+
+
+	//LPC_SCRLARGE1
+	LPC_SCTLARGE1->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
+	LPC_SCTLARGE1->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
+	LPC_SCTLARGE1->MATCHREL[0].L = 20000; // match 0 @ 10/1MHz = 10 usec (100 kHz PWM freq) (1MHz/1000)
+	LPC_SCTLARGE1->MATCHREL[1].L = 1000; // match 1 used for duty cycle (in 10 steps)
+	LPC_SCTLARGE1->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
+	LPC_SCTLARGE1->EVENT[0].CTRL = (1 << 12); // match 0 condition only
+	LPC_SCTLARGE1->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
+	LPC_SCTLARGE1->EVENT[1].CTRL = (1 << 0) | (1 << 12); // match 1 condition only
+	LPC_SCTLARGE1->OUT[0].SET = (1 << 0); // event 0 will set SCTx_OUT0
+	LPC_SCTLARGE1->OUT[0].CLR = (1 << 1); // event 1 will clear SCTx_OUT0
+	LPC_SCTLARGE1->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
+}
+
+/*	Move the X Servo
+ * 	(scale to 1000)
+ *
+ */
+void xMove(int pos){
+	LPC_SCTLARGE0->MATCHREL[1].L = pos;
 }
 
 extern "C" {
@@ -225,6 +275,11 @@ void vConfigureTimerForRunTimeStats( void ) {
 	DigitalIoPin inteastpin15(1,0,DigitalIoPin::output,true);//2.5
 	intnorth  0 0
 
+	DigitalIoPin servo1(0,28,DigitalIoPin::output,true);//2.5
+	DigitalIoPin servo2(0,14,DigitalIoPin::output,true);//2.5
+
+
+
 DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin11(0,10,DigitalIoPin::output,true);//2.5
@@ -233,49 +288,6 @@ DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
 
 DigitalIoPin pin16(0,27,DigitalIoPin::output,true);//0
-DigitalIoPin pin17(0,28,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin18(0,12,DigitalIoPin::output,true);//0
-DigitalIoPin pin19(0,14,DigitalIoPin::output,true);//2.5
-
-
- */
-//void SCT_Init(void)
-//{
-//	Chip_SCT_Init(LPC_SCTLARGE0);
-//	LPC_SCTLARGE0->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
-//	LPC_SCTLARGE0->CONFIG |= (1 << 18); // two 16-bit timers, auto limit
-//	LPC_SCTLARGE0->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
-//	LPC_SCTLARGE0->CTRL_H |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
-//
-//	LPC_SCTLARGE0->MATCHREL[0].L = 1000-1; // set the max frequency to 1kHz for the SCT1
-//	LPC_SCTLARGE0->MATCHREL[1].L = 500; //
-//	LPC_SCTLARGE0->MATCHREL[0].H = 1000-1; // set the max frequency to 1kHz for the SCT2
-//	LPC_SCTLARGE0->MATCHREL[3].H = 500; //
-//
-//	LPC_SCTLARGE0->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
-//	LPC_SCTLARGE0->EVENT[0].CTRL = (1 << 12); // match 0 condition only
-//	LPC_SCTLARGE0->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
-//	LPC_SCTLARGE0->EVENT[1].CTRL = (1 << 0) | (1 << 12); // match 1 condition only
-//	LPC_SCTLARGE0->EVENT[2].STATE = 0xFFFFFFFF; // event 0 happens in all states
-//	LPC_SCTLARGE0->EVENT[2].CTRL = (1 << 12) | (1 << 4); // match 1 condition only
-//	LPC_SCTLARGE0->EVENT[3].STATE = 0xFFFFFFFF; // event 1 happens in all states
-//	LPC_SCTLARGE0->EVENT[3].CTRL = (3 << 0) | (1 << 12) | (1 << 4); // match 3 conditions
-//	LPC_SCTLARGE0->OUT[0].SET = (1 << 0); // event 0 will set SCTx_OUT0
-//	LPC_SCTLARGE0->OUT[0].CLR = (1 << 1); // event 1 will clear SCTx_OUT0
-//
-//	LPC_SCTLARGE0->OUT[1].SET = (1 << 0); // event 0 will set SCTx_OUT0
-//	LPC_SCTLARGE0->OUT[1].CLR = (1 << 3); // event 1 will clear SCTx_OUT0
-//
-//	LPC_SCTLARGE0->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
-//	LPC_SCTLARGE0->CTRL_H &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
-//
-//
-//	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O,0,8);
-//	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O,1,6);
-//
-//}
-//void PWM_set(int val) {
-//	LPC_SCTLARGE0->MATCHREL[3].L = val;
-//	LPC_SCTLARGE0->MATCHREL[1].L = val;
-//}
+*/
 

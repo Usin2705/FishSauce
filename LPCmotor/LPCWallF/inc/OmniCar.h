@@ -20,7 +20,7 @@ public:
 	virtual ~OmniCar();
 
 	void move(DIRECTION direction);
-	void indimove(WHEEL wheel, bool dir);
+	void indiMove(WHEEL wheel, bool dir);
 	void turn(DIRECTION direction);
 	void stopWheel(WHEEL wheel);
 	void setWheelEnable(WHEEL wheel);
