@@ -13,10 +13,10 @@ import cv2
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-c", "--cascade", default = "haarcascade_frontalface_default.xml", required=True,
-	help = "path to where the face cascade resides")
-ap.add_argument("-e", "--encodings", default = "encodings.pickle", required=True,
-	help="path to serialized db of facial encodings")
+ap.add_argument("-c", "--cascade", default = "haarcascade_frontalface_default.xml",
+                help = "path to where the face cascade resides")
+ap.add_argument("-e", "--encodings", default = "encodings.pickle",
+                help="path to serialized db of facial encodings")
 args = vars(ap.parse_args())
 
 # load the known faces and embeddings along with OpenCV's Haar
