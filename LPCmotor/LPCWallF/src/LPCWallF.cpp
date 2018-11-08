@@ -19,8 +19,6 @@
 #include "ITM_write.h"
 #include "string"
 #include "RPSerial.h"
-#include "HCSerial.h"
-#define USEHC 0
 
 // TODO: global variables here
 // Queue for gcode command structs
@@ -33,11 +31,11 @@ OmniCar omniCar;
 
 // TODO: definitions and declarations here
 static void vTaskReceiveRP(void *pvParameters);
-static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
 void SCT_init();
-void xMove(int pos);
+void cameraMoveX(int pos);
+void cameraMoveY(int pos);
 
 
 int main(void) {
@@ -45,16 +43,10 @@ int main(void) {
 
 	SCT_init();
 
-#if !USEHC
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
-#endif
-#if USEHC
-	xTaskCreate(vTaskReceiveHC, "receiveHC",
-			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
-			(TaskHandle_t *) NULL);
-#endif
+
 	xTaskCreate(vTaskMotor, "motor",
 			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
@@ -64,12 +56,12 @@ int main(void) {
 	return 1;
 }
 
-#if !USEHC
 static void vTaskReceiveRP(void *pvParameters) {
 	int c = 0;
 	std::string str = "";
 	Command cmd;
 	RPSerial rpSerial;
+	rpSerial.write("AT+C001", strlen("AT+C001"));
 	while(1){
 		c = rpSerial.read();
 		if(c != EOF){
@@ -89,34 +81,6 @@ static void vTaskReceiveRP(void *pvParameters) {
 		}
 	}
 }
-#endif
-#if USEHC
-static void vTaskReceiveHC(void *pvParameters) {
-	int c = 0;
-	std::string str = "";
-	Command cmd;
-	HCSerial hcSerial;
-	hcSerial.write("AT+C001", strlen("AT+C001"));
-	while(1){
-		c = hcSerial.read();
-		if(c != EOF){
-			if (c!= '\r') {
-				Board_UARTPutChar(c);
-				str += (char) c;
-			} else {
-				Board_UARTPutSTR("\r\n");
-				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
-				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
-				} else {
-					ITM_write("Cannot Send to the Queue\r\n");
-				}
-
-				str = "";
-			}
-		}
-	}
-}
-#endif
 
 static void vTaskMotor(void *pvParameters) {
 
@@ -125,13 +89,11 @@ static void vTaskMotor(void *pvParameters) {
 	while(1){
 		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
-				carindimove(omniCar, NORTH, CLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
-				xMove(cmd.count);
+				carindimove(omniCar, NORTH, CLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
-				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
-				xMove(cmd.count);
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
 				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
 				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
@@ -197,7 +159,7 @@ void SCT_init(){
 	LPC_SCTLARGE1->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
 	LPC_SCTLARGE1->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
 	LPC_SCTLARGE1->MATCHREL[0].L = 20000; // match 0 @ 10/1MHz = 10 usec (100 kHz PWM freq) (1MHz/1000)
-	LPC_SCTLARGE1->MATCHREL[1].L = 1000; // match 1 used for duty cycle (in 10 steps)
+	LPC_SCTLARGE1->MATCHREL[1].L = 2380; // match 1 used for duty cycle (in 10 steps)
 	LPC_SCTLARGE1->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
 	LPC_SCTLARGE1->EVENT[0].CTRL = (1 << 12); // match 0 condition only
 	LPC_SCTLARGE1->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
@@ -208,12 +170,30 @@ void SCT_init(){
 }
 
 /*	Move the X Servo
- * 	(scale to 1000)
+ * 	2450: full left
+ * 	750: full right
+ * 	1600 middle
  *
  */
-void xMove(int pos){
+void cameraMoveX(int pos){
+	if (pos>2450) pos = 2450;
+	if (pos<750) pos = 750;
 	LPC_SCTLARGE0->MATCHREL[1].L = pos;
 }
+
+
+/*	Move the Y Servo
+ * 	2380: front
+ * 	1500: top
+ * 	1100: back
+ *
+ */
+void cameraMoveY(int pos){
+	if (pos > 2380) pos = 2380;
+	if (pos < 1100) pos = 1100;
+	LPC_SCTLARGE1->MATCHREL[1].L = pos;
+}
+
 
 extern "C" {
 
