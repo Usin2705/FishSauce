@@ -6,7 +6,7 @@ from subprocess import call
 isTTS = False
 
 uart = UartCommunication(9600)
-call(["/usr/bin/amixer", "cset", "numid=1", "85%"])
+call(["/usr/bin/amixer", "cset", "numid=1", "90%"])
 speech = input("Press T to use text to speech.\nPress M to move.\nType exit to quit.\n")
 
 if speech.lower()=="t":	

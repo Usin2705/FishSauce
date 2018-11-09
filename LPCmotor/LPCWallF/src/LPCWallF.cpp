@@ -21,6 +21,13 @@
 #include "RPSerial.h"
 
 // TODO: global variables here
+#define CAM_X_CENTER 1500
+#define CAM_X_LEFT 2350
+#define CAM_X_RIGHT 700
+
+#define CAM_Y_CENTER 2380
+#define CAM_Y_UP 1100
+
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
 volatile uint32_t pulse_north = 0;
@@ -34,8 +41,8 @@ static void vTaskReceiveRP(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
 void SCT_init();
-void cameraMoveX(int pos);
-void cameraMoveY(int pos);
+int cameraMoveX(int pos);
+int cameraMoveY(int pos);
 
 
 int main(void) {
@@ -85,7 +92,8 @@ static void vTaskReceiveRP(void *pvParameters) {
 static void vTaskMotor(void *pvParameters) {
 
 	Command cmd;
-
+	int xPos = CAM_X_CENTER;
+	int yPos = CAM_Y_CENTER;
 	while(1){
 		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
@@ -110,6 +118,22 @@ static void vTaskMotor(void *pvParameters) {
 				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
+			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camleft") == 0){
+				xPos = cameraMoveX(xPos+50);
+			} else if (strcmp(cmd.cmd_type, "camright") == 0){
+				xPos = cameraMoveX(xPos-50);
+			} else if (strcmp(cmd.cmd_type, "camup") == 0){
+				yPos = cameraMoveY(yPos - 50);
+			} else if (strcmp(cmd.cmd_type, "camdown") == 0){
+				yPos = cameraMoveY(yPos + 50);
+			} else if (strcmp(cmd.cmd_type, "camcenter") == 0){
+				xPos = cameraMoveX(CAM_X_CENTER);
+				yPos = cameraMoveY(CAM_Y_CENTER);
 			}
 		}
 	}
@@ -145,7 +169,7 @@ void SCT_init(){
 	LPC_SCTLARGE0->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
 
 	LPC_SCTLARGE0->MATCHREL[0].L = 20000; // match 0 @ 10/1MHz = 10 usec (100 kHz PWM freq) (1MHz/20000)
-	LPC_SCTLARGE0->MATCHREL[1].L = 1600; // match 1 used for duty cycle (in 10 steps)
+	LPC_SCTLARGE0->MATCHREL[1].L = CAM_X_CENTER; // match 1 used for duty cycle (in 10 steps)
 	LPC_SCTLARGE0->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
 	LPC_SCTLARGE0->EVENT[0].CTRL = (1 << 12); // match 0 condition only
 	LPC_SCTLARGE0->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
@@ -172,13 +196,14 @@ void SCT_init(){
 /*	Move the X Servo
  * 	2450: full left
  * 	750: full right
- * 	1600 middle
+ * 	1500 middle
  *
  */
-void cameraMoveX(int pos){
-	if (pos>2450) pos = 2450;
-	if (pos<750) pos = 750;
+int cameraMoveX(int pos){
+	if (pos>CAM_X_LEFT) pos = CAM_X_LEFT;
+	if (pos<CAM_X_RIGHT) pos = CAM_X_RIGHT;
 	LPC_SCTLARGE0->MATCHREL[1].L = pos;
+	return pos;
 }
 
 
@@ -188,10 +213,11 @@ void cameraMoveX(int pos){
  * 	1100: back
  *
  */
-void cameraMoveY(int pos){
-	if (pos > 2380) pos = 2380;
-	if (pos < 1100) pos = 1100;
+int cameraMoveY(int pos){
+	if (pos > CAM_Y_CENTER) pos = CAM_Y_CENTER;
+	if (pos < CAM_Y_UP) pos = CAM_Y_UP;
 	LPC_SCTLARGE1->MATCHREL[1].L = pos;
+	return pos;
 }
 
 
@@ -269,5 +295,5 @@ DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
 
 DigitalIoPin pin16(0,27,DigitalIoPin::output,true);//0
 DigitalIoPin pin18(0,12,DigitalIoPin::output,true);//0
-*/
+ */
 

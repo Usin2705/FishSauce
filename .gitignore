@@ -7,3 +7,4 @@ LPCmotor/LPCWallF/LPCWallF LinkServer Release.launch
 LPCmotor/LPCWallF/LPCWallF LinkServer Debug.launch
 /.metadata/
 LPCmotor/FreeRTOS/Debug/
+RaspberryPi3/SubPackage/__pycache__/
