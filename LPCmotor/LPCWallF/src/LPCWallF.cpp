@@ -76,7 +76,7 @@ static void vTaskReceiveRP(void *pvParameters) {
 				Board_UARTPutChar(c);
 				str += (char) c;
 			} else {
-				Board_UARTPutSTR("\r\n");
+				//Board_UARTPutSTR("\r\n");
 				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
 				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
 				} else {
