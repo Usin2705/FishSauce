@@ -126,15 +126,27 @@ def listenForCommand(listenTime):
 
 		commandtts =  "pico2wave -w tts.wav "						
 		uart = UartCommunication(9600)
-		if (textVerify(command, "hello")):
+		if (textVerify(command, ["hello", "hi", "my", "fish"])):
 			commandtts+= "\"Hello! How are you?\""
 			uart.actionGreeting()
-		elif textVerify(command, "say") and textVerify(command, "yes"):
+		elif textVerify(command, ["Says", "Say"]) and textVerify(command, ["yes" ,"ok", "agree", "agrees"]):
 			commandtts+= "\"Yes\""
 			uart.actionYes()
-		elif textVerify(command, "say") and textVerify(command, "no"):
+		elif textVerify(command, ["Says", "Say"]) and textVerify(command, ["no","negative", "disagree", "disagrees"]):
 			commandtts+= "\"No\""
-			uart.actionNo() 
+			uart.actionNo()
+		elif textVerify(command, ["backward", "back", "out"]):
+			commandtts+= "\"Okie dokie\""
+			uart.Send_Command_To_LPC("down 200\r\n")
+		elif textVerify(command, ["forward", "come", "here"]):
+			commandtts+= "\"I'm comming\""
+			uart.Send_Command_To_LPC("up 200\r\n")
+		elif textVerify(command, ["turn", "rotate", "done"]) and textVerify(command, ["left"]):			
+			commandtts+= "\"Woof woof\""
+			uart.Send_Command_To_LPC("turnl 95\r\n")
+		elif textVerify(command, ["turn", "rotate", "done"]) and textVerify(command, ["right","flight","white"]):			
+			commandtts+= "\"alright alright\""
+			uart.Send_Command_To_LPC("turnr 95\r\n")
 		else:
 			success = False
 		
