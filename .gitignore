@@ -10,3 +10,5 @@ LPCmotor/FreeRTOS/Debug/
 RaspberryPi3/SubPackage/__pycache__/
 .ipynb_checkpoints/
 *.wav
+LPCMotor/usb_cdc/Debug/
+RaspberryPi3/camera.jpg

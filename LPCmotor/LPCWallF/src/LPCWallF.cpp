@@ -76,7 +76,7 @@ static void vTaskReceiveRP(void *pvParameters) {
 				Board_UARTPutChar(c);
 				str += (char) c;
 			} else {
-				//Board_UARTPutSTR("\r\n");
+				Board_UARTPutSTR("\r\n");
 				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
 				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
 				} else {
@@ -123,15 +123,15 @@ static void vTaskMotor(void *pvParameters) {
 				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
-			} else if (strcmp(cmd.cmd_type, "camleft") == 0){
-				xPos = cameraMoveX(xPos+50);
-			} else if (strcmp(cmd.cmd_type, "camright") == 0){
-				xPos = cameraMoveX(xPos-50);
-			} else if (strcmp(cmd.cmd_type, "camup") == 0){
-				yPos = cameraMoveY(yPos - 50);
-			} else if (strcmp(cmd.cmd_type, "camdown") == 0){
-				yPos = cameraMoveY(yPos + 50);
-			} else if (strcmp(cmd.cmd_type, "camcenter") == 0){
+			} else if (strcmp(cmd.cmd_type, "caml") == 0){
+				xPos = cameraMoveX(xPos + cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camr") == 0){
+				xPos = cameraMoveX(xPos - cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camu") == 0){
+				yPos = cameraMoveY(yPos - cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camd") == 0){
+				yPos = cameraMoveY(yPos + cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camc") == 0){
 				xPos = cameraMoveX(CAM_X_CENTER);
 				yPos = cameraMoveY(CAM_Y_CENTER);
 			}

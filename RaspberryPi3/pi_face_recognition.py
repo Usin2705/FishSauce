@@ -10,6 +10,8 @@ import imutils
 import pickle
 import time
 import cv2
+import subprocess
+from SubPackage.UartCommunication import UartCommunication
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -36,13 +38,14 @@ time.sleep(2.0)
 
 # start the FPS counter
 fps = FPS().start()
+startTime = time.time()
 
 # loop over frames from the video file stream
 while True:
 	# grab the frame from the threaded video stream and resize it
 	# to 500px (to speedup processing)
 	frame = vs.read()
-	frame = imutils.resize(frame, width=500)
+	frame = imutils.resize(frame, width=400)
 	
 	# convert the input frame from (1) BGR to grayscale (for face
 	# detection) and (2) from BGR to RGB (for face recognition)
@@ -68,7 +71,7 @@ while True:
 		# attempt to match each face in the input image to our known
 		# encodings
 		matches = face_recognition.compare_faces(data["encodings"],
-			encoding)
+			encoding, tolerance=0.4)
 		name = "Unknown"
 
 		# check to see if we have found a match
@@ -99,10 +102,48 @@ while True:
 		cv2.rectangle(frame, (left, top), (right, bottom),
 			(0, 255, 0), 2)
 		y = top - 15 if top - 15 > 15 else top + 15
+		xAdjust = (right + left)
+		yAdjust = (top + bottom)
 		cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
 			0.75, (0, 255, 0), 2)
+		
+		if name=="NhanPhan":
+			startTime = time.time()                        
+			uart = UartCommunication(9600)
+			#based on 800x600
+			#800->950
+			if (xAdjust) > 575:
+					uart.Send_Command_To_LPC("camr 100\r\n")
+					time.sleep(0.05)   
+			elif (xAdjust) > 475:
+					uart.Send_Command_To_LPC("camr 40\r\n")
+					time.sleep(0.05)
+			elif (xAdjust) < 225:
+					uart.Send_Command_To_LPC("caml 100\r\n")
+					time.sleep(0.05)
+			elif (xAdjust) < 325:
+					uart.Send_Command_To_LPC("caml 40\r\n")
+					time.sleep(0.05)
+			#600->700
+			if (yAdjust) > 450:
+					uart.Send_Command_To_LPC("camd 100\r\n")
+					time.sleep(0.05)    
+			elif (yAdjust) > 350:
+					uart.Send_Command_To_LPC("camd 40\r\n")
+					time.sleep(0.05)
+			elif (yAdjust) < 180:
+					uart.Send_Command_To_LPC("camu 100\r\n")
+					time.sleep(0.05)
+			elif (yAdjust) < 250:
+					uart.Send_Command_To_LPC("camu 40\r\n")
+					time.sleep(0.05)
 
+                        
+	elapsedTime = time.time() - startTime
+	if elapsedTime > 30:
+		subprocess.call(["aplay", "WavFiles/I-will-look-for-you.wav"])
 	# display the image to our screen
+	cv2.imwrite("camera.jpg", frame)
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
 

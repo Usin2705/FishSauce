@@ -27,27 +27,27 @@ void setup() {
 
 void loop() {
   if (!digitalRead(up_button)) {
-    Serial.println("camup");
+    Serial.println("camu 50");
   }
 
   if (!digitalRead(down_button)) {
-    Serial.println("camdown");
+    Serial.println("camd 50");
   }
 
   if (!digitalRead(left_button)) {
-    Serial.println("camleft");
+    Serial.println("caml 50");
   }
 
   if (!digitalRead(right_button)) {
-    Serial.println("camright");
+    Serial.println("camr 50");
   }
 
   if (!digitalRead(start_button)) {
-    Serial.println("camcenter");
+    Serial.println("camc");
   }
 
   if (!digitalRead(select_button)) {
-    Serial.println("camcenter");
+    Serial.println("camc");
   }
 
   int xAnalog = analogRead(joystick_axis_x);
@@ -57,11 +57,11 @@ void loop() {
     if (xAnalog >= 600) {
       Serial.println("right 5");
     } else if (xAnalog >= 900) {
-      Serial.println("right 10");
+      Serial.println("right 20");
     } else if (xAnalog <= 400) {
       Serial.println("left 5");
     } else if (xAnalog <= 100) {
-      Serial.println("left 10");
+      Serial.println("left 20");
     }
   // If press the joystick button
   } else {
@@ -81,11 +81,11 @@ void loop() {
   if (yAnalog >= 600) {
       Serial.println("up 5");
     } else if (yAnalog >= 900) {
-      Serial.println("up 10");
+      Serial.println("up 20");
     } else if (yAnalog <= 400) {
       Serial.println("down 5");
     } else if (yAnalog <= 100) {
-      Serial.println("down 10");
+      Serial.println("down 20");
     }
 
 

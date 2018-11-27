@@ -167,5 +167,5 @@ def listenForCommand(listenTime):
 		return success
 		
 if __name__ == "__main__":
-	while(True):
-		listenForCommand(4)
+	#while(True):
+	listenForCommand(4)

@@ -4,8 +4,7 @@ from SubPackage.UartCommunication import UartCommunication
 #from SubPackage.speechRegModule import listenForCommand
 from subprocess import call
 
-async def keyboardInput():
-	await asyncio.sleep(0)
+def keyboardInput():
 	isTTS = False
 
 	uart = UartCommunication(9600)
@@ -24,16 +23,9 @@ async def keyboardInput():
 				isTTS = False
 		else:
 			isTTS = uart.handleMoveKeys()
-
-#async def speechTask():
-	#await asyncio.sleep(5)
-	#listenForCommand()
-	#await asyncio.sleep(5)
 	
 if __name__ == '__main__':
-	kbTask = asyncio.ensure_future(keyboardInput())
-	#spTask = asyncio.ensure_future(speechTask())
-	loop = asyncio.get_event_loop()
-	loop.run_forever()
+	while (1):
+	keyboardInput()
 
 		
