@@ -10,7 +10,7 @@ BLE_ADV ble;
 
 void setup() {
 	Serial.begin(115200);
-	ble.begin("ESP32-BLE02");  //sets the device name
+	ble.begin("BeaconZ");  //sets the device name
 }
 
 void loop() {

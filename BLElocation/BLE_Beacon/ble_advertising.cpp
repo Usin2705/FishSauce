@@ -1,4 +1,4 @@
-de#include "ble_advertising.h"
+#include "ble_advertising.h"
 #include "esp32-hal-log.h"
 
 #include "bt.h"

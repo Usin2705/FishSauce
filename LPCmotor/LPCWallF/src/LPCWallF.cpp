@@ -285,14 +285,18 @@ void vConfigureTimerForRunTimeStats( void ) {
 	DigitalIoPin servo2(0,14,DigitalIoPin::output,true);//2.5
 
 
+	//UART1 RPi
+	DigitalIoPin pin11(0,10,DigitalIoPin::output,true);//2.5
+	DigitalIoPin pin12(1,3,DigitalIoPin::output,true);//2.5
+
+	//UART2 Control
+	DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
 
 DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin11(0,10,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin12(1,3,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
 
+DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
+
+DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
 DigitalIoPin pin16(0,27,DigitalIoPin::output,true);//0
 DigitalIoPin pin18(0,12,DigitalIoPin::output,true);//0
  */
