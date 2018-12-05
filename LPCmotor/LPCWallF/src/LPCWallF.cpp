@@ -121,27 +121,27 @@ static void vTaskMotor(void *pvParameters) {
 	while(1){
 		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
-				carindimove(omniCar, NORTH, CLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, NORTH, CLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
-				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
-				carindimove(omniCar, EAST, CLOCKWISE, 100);
-				carindimove(omniCar, WEST, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
-				carindimove(omniCar, EAST, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, WEST, CLOCKWISE, 100);
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
-				carindimove(omniCar, NORTH, CLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, CLOCKWISE, 100);
-				carindimove(omniCar, EAST, CLOCKWISE, 100);
-				carindimove(omniCar, WEST, CLOCKWISE, 100);
+				carindimove(omniCar, NORTH, CLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, CLOCKWISE, cmd.count);
+				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
-				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, EAST, COUNTERCLOCKWISE, 100);
-				carindimove(omniCar, WEST, COUNTERCLOCKWISE, 100);
+				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			}
 		}
 	}
