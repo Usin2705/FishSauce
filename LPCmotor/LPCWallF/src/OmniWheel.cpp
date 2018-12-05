@@ -29,18 +29,22 @@ pin2(portPin2, pinPin2, DigitalIoPin::output, true)
 	case 0:
 		NVIC_ClearPendingIRQ(PIN_INT0_IRQn);
 		NVIC_EnableIRQ(PIN_INT0_IRQn);
+		NVIC_SetPriority(PIN_INT0_IRQn,4);
 		break;
 	case 1:
 		NVIC_ClearPendingIRQ(PIN_INT1_IRQn);
 		NVIC_EnableIRQ(PIN_INT1_IRQn);
+		NVIC_SetPriority(PIN_INT1_IRQn,4);
 		break;
 	case 2:
 		NVIC_ClearPendingIRQ(PIN_INT2_IRQn);
 		NVIC_EnableIRQ(PIN_INT2_IRQn);
+		NVIC_SetPriority(PIN_INT2_IRQn,4);
 		break;
 	case 3:
 		NVIC_ClearPendingIRQ(PIN_INT3_IRQn);
 		NVIC_EnableIRQ(PIN_INT3_IRQn);
+		NVIC_SetPriority(PIN_INT3_IRQn,4);
 		break;
 	}
 }
