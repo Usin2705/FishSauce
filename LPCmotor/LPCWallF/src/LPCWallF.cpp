@@ -31,6 +31,7 @@
 
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
+QueueHandle_t obstacleQueue;
 volatile uint32_t pulse_north = 0;
 volatile uint32_t pulse_south = 0;
 volatile uint32_t pulse_east = 0;
@@ -43,15 +44,17 @@ static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
 void SCT_init();
+void SCT0_Init();
 int cameraMoveX(int pos);
 int cameraMoveY(int pos);
-
+static void prvSetupHardware();
 
 int main(void) {
 	cmdQueue = xQueueCreate(4, sizeof(Command));
-
+	obstacleQueue = xQueueCreate(1, sizeof(bool));
+	prvSetupHardware();
 	SCT_init();
-
+	SCT0_Init();
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
@@ -150,11 +153,6 @@ static void vTaskMotor(void *pvParameters) {
 				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
-			} else if (strcmp(cmd.cmd_type, "turnr") == 0){
-				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
-				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
-				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
-				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "caml") == 0){
 				xPos = cameraMoveX(xPos + cmd.count);
 			} else if (strcmp(cmd.cmd_type, "camr") == 0){
@@ -165,6 +163,9 @@ static void vTaskMotor(void *pvParameters) {
 				yPos = cameraMoveY(yPos + cmd.count);
 			} else if (strcmp(cmd.cmd_type, "camm") == 0){
 				xPos = cameraMoveX(CAM_X_CENTER);
+			} else if (strcmp(cmd.cmd_type, "camf") == 0){
+				xPos = cameraMoveX(CAM_X_CENTER);
+				yPos = cameraMoveY(2100);
 			} else if (strcmp(cmd.cmd_type, "camc") == 0){
 				xPos = cameraMoveX(CAM_X_CENTER);
 				yPos = cameraMoveY(CAM_Y_CENTER);
@@ -227,6 +228,47 @@ void SCT_init(){
 	LPC_SCTLARGE1->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
 }
 
+void SCT0_Init()
+{
+	Chip_INMUX_SelectSCT0Src(0, SCT0_INMUX_PIO1_6);			// SCT2_IN0 at P1_6
+	Chip_INMUX_SelectSCT0Src(1, SCT0_INMUX_PIO1_7);			// SCT2_IN0 at P1_7
+
+	LPC_SYSCON->SYSAHBCLKCTRL[0] |= (1 << 2);                			// enable the SCT0 clock
+	LPC_SCT0->CONFIG           |= (1 << 0);			      			// unified
+
+	LPC_SCT0->CTRL_U        |= (72 << 5);       					// set pre-scaler
+
+	LPC_SCT0->REGMODE_L      = (1 << 0) | (1 << 1)
+							 | (1 << 2) | (1 << 3);        			// CAP 0 and CAP 1
+
+
+	LPC_SCT0->EVENT[1].STATE = 0xFFFFFFFF;                 			// event 1 happens in all states
+	LPC_SCT0->EVENT[1].CTRL  = (1 << 10) | (2 << 12);      			// IN_0 rising edge condition only
+
+	LPC_SCT0->EVENT[2].STATE = 0xFFFFFFFF;                 			// event 2 happens in all states
+	LPC_SCT0->EVENT[2].CTRL  = (2 << 10) | (2 << 12);      			// IN_0 falling edge condition only
+
+	LPC_SCT0->EVENT[3].STATE = 0xFFFFFFFF;                 			// event 3 happens in all states
+	LPC_SCT0->EVENT[3].CTRL  = (1 << 10) | (2 << 12) | (1 << 6);    // IN_1 rising edge condition only
+
+	LPC_SCT0->EVENT[4].STATE = 0xFFFFFFFF;                 			// event 4 happens in all states
+	LPC_SCT0->EVENT[4].CTRL  = (2 << 10) | (2 << 12) | (1 << 6);    // IN_1 falling edge condition only
+
+	LPC_SCT0->CAPCTRL[0].U   = (1 << 1);                   			// event 1 is causing capture 0
+	LPC_SCT0->CAPCTRL[1].U   = (1 << 2);       			   			// event 2 cause capture 1
+	LPC_SCT0->CAPCTRL[2].U   = (1 << 3);                   			// event 3 is causing capture 2
+	LPC_SCT0->CAPCTRL[3].U   = (1 << 4);       			   			// event 4 cause capture 3
+
+	LPC_SCT0->OUT[0].SET     = (1 << 1);                   			// event 1 set   OUT0 LED ON
+	LPC_SCT0->OUT[0].CLR     = (1 << 2);                   			// event 2 clear OUT0 LED OFF
+
+	LPC_SCT0->EVEN           = (1 << 2) | (1 << 4);        		   			// event 2 generate an irq
+
+	NVIC_EnableIRQ(SCT0_IRQn);                             			// enable SCT0 interrupt
+
+	LPC_SCT0->CTRL_U           &= ~(1 << 2);               			// start timer
+}
+
 /*	Move the X Servo
  * 	2450: full left
  * 	750: full right
@@ -254,6 +296,23 @@ int cameraMoveY(int pos){
 	return pos;
 }
 
+static void prvSetupHardware()
+{
+	SystemCoreClockUpdate();
+	Board_Init();
+
+	LPC_SYSCON->SYSAHBCLKCTRL[0] |= (1<<12)    |         // enable SWM clock
+			(1<<14)  |         // enable GPIO port 0 clock
+			(1<<15)  |         // enable GPIO port 1 clock
+			(1<<11)  |         // enable PMUX clock
+			(1<<13);           // enable IOCON clock
+
+	LPC_SWM->PINASSIGN[7]        |= 0x00FFFF00;          // ASSIGN7(23:8) = FFFF
+	LPC_SWM->PINASSIGN[7]        &= 0xFF1800FF;          // SCT0_OUT0 = P0.0  = timeout (red LED)
+	// SCT0_OUT1 = P0.24 = width_error (green LED)
+//	LPC_PMUX->SCT0_P_MUX0       = 2;                   // SCT0_IN2  = P0.17 = SW1
+
+}
 
 extern "C" {
 
@@ -295,6 +354,40 @@ void vConfigureTimerForRunTimeStats( void ) {
 	Chip_SCT_Init(LPC_SCTSMALL1);
 	LPC_SCTSMALL1->CONFIG = SCT_CONFIG_32BIT_COUNTER;
 	LPC_SCTSMALL1->CTRL_U = SCT_CTRL_PRE_L(255) | SCT_CTRL_CLRCTR_L; // set prescaler to 256 (255 + 1), and start timer
+}
+
+void SCT0_IRQHandler(void)
+{
+	uint32_t status = LPC_SCT0->EVFLAG;
+	uint32_t time, time2;
+	bool isBlocked = false;
+	BaseType_t xHigherPriorityTaskWoken;
+	if(status & (1 << 2)) {
+		if(LPC_SCT0->CAP[1].U >= LPC_SCT0->CAP[0].U) {
+			time = LPC_SCT0->CAP[1].U - LPC_SCT0->CAP[0].U;
+		}
+		else {															//The counter has been reset
+			time = 4294967295 - LPC_SCT0->CAP[0].U + LPC_SCT0->CAP[1].U;
+		}
+		time = (double)time*17.0/1000.0;
+		if(time <= 25.0)
+			isBlocked = true;
+		else isBlocked  = false;
+	}
+	if(status & (1 << 4)) {
+		if(LPC_SCT0->CAP[3].U >= LPC_SCT0->CAP[2].U) {
+			time2 = LPC_SCT0->CAP[3].U - LPC_SCT0->CAP[2].U;
+		}
+		else {															//The counter has been reset
+			time2 = 4294967295 - LPC_SCT0->CAP[2].U + LPC_SCT0->CAP[3].U;
+		}
+		time2 = (double)time2*17.0/1000.0;
+		if(time2 <= 25.0)
+			isBlocked = true;
+		else isBlocked  = false;
+	}
+	//xQueueSendFromISR(obstacleQueue, &isBlocked, &xHigherPriorityTaskWoken);
+	LPC_SCT0->EVFLAG = status;                         				// Acknowledge interrupts
 }
 
 }
