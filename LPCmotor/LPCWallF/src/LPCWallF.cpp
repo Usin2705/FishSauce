@@ -19,6 +19,7 @@
 #include "ITM_write.h"
 #include "string"
 #include "RPSerial.h"
+#include "HCSerial.h"
 
 // TODO: global variables here
 #define CAM_X_CENTER 1500
@@ -38,6 +39,7 @@ OmniCar omniCar;
 
 // TODO: definitions and declarations here
 static void vTaskReceiveRP(void *pvParameters);
+static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
 void SCT_init();
@@ -51,6 +53,10 @@ int main(void) {
 	SCT_init();
 
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
+			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
+			(TaskHandle_t *) NULL);
+
+	xTaskCreate(vTaskReceiveHC, "receiveHC",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
 
@@ -71,6 +77,32 @@ static void vTaskReceiveRP(void *pvParameters) {
 	rpSerial.write("AT+C001", strlen("AT+C001"));
 	while(1){
 		c = rpSerial.read();
+		if(c != EOF){
+			if (c!= '\r') {
+				Board_UARTPutChar(c);
+				str += (char) c;
+			} else {
+				Board_UARTPutSTR("\r\n");
+				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
+				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
+				} else {
+					ITM_write("Cannot Send to the Queue\r\n");
+				}
+
+				str = "";
+			}
+		}
+	}
+}
+
+static void vTaskReceiveHC(void *pvParameters) {
+	int c = 0;
+	std::string str = "";
+	Command cmd;
+	HCSerial hcSerial;
+	hcSerial.write("AT+C001", strlen("AT+C001"));
+	while(1){
+		c = hcSerial.read();
 		if(c != EOF){
 			if (c!= '\r') {
 				Board_UARTPutChar(c);
@@ -131,6 +163,8 @@ static void vTaskMotor(void *pvParameters) {
 				yPos = cameraMoveY(yPos - cmd.count);
 			} else if (strcmp(cmd.cmd_type, "camd") == 0){
 				yPos = cameraMoveY(yPos + cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camm") == 0){
+				xPos = cameraMoveX(CAM_X_CENTER);
 			} else if (strcmp(cmd.cmd_type, "camc") == 0){
 				xPos = cameraMoveX(CAM_X_CENTER);
 				yPos = cameraMoveY(CAM_Y_CENTER);
@@ -292,9 +326,8 @@ void vConfigureTimerForRunTimeStats( void ) {
 	//UART2 Control
 	DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
 
-DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
-
-DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
+	DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
+	DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
 
 DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
 DigitalIoPin pin16(0,27,DigitalIoPin::output,true);//0
