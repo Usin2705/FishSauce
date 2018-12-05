@@ -52,7 +52,7 @@ void OmniCar::move(DIRECTION direction) {
 	}
 }
 
-void OmniCar::indimove(WHEEL wheel, bool dir) {
+void OmniCar::indiMove(WHEEL wheel, bool dir) {
 	switch(wheel) {
 	case NORTH:
 		this->north->setEnable();
@@ -75,13 +75,13 @@ void OmniCar::indimove(WHEEL wheel, bool dir) {
 
 void OmniCar::turn(DIRECTION direction) {
 	switch (direction) {
-	case LEFT:
+	case RIGHT:
 		east->rotate(ISCLOCKWISE);
 		west->rotate(ISCLOCKWISE);
 		north->rotate(ISCLOCKWISE);
 		south->rotate(ISCLOCKWISE);
 		break;
-	case RIGHT:
+	case LEFT:
 		east->rotate(!ISCLOCKWISE);
 		west->rotate(!ISCLOCKWISE);
 		north->rotate(!ISCLOCKWISE);

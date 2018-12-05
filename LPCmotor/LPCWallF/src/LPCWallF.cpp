@@ -20,9 +20,15 @@
 #include "string"
 #include "RPSerial.h"
 #include "HCSerial.h"
-#define USEHC 1
 
 // TODO: global variables here
+#define CAM_X_CENTER 1500
+#define CAM_X_LEFT 2350
+#define CAM_X_RIGHT 700
+
+#define CAM_Y_CENTER 2380
+#define CAM_Y_UP 1100
+
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
 volatile uint32_t pulse_north = 0;
@@ -32,25 +38,28 @@ volatile uint32_t pulse_west = 0;
 OmniCar omniCar;
 
 // TODO: definitions and declarations here
-//static void vTaskReceiveRP(void *pvParameters);
+static void vTaskReceiveRP(void *pvParameters);
 static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
+void SCT_init();
+int cameraMoveX(int pos);
+int cameraMoveY(int pos);
 
 
 int main(void) {
 	cmdQueue = xQueueCreate(4, sizeof(Command));
 
-#if !USEHC
+	SCT_init();
+
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
-#endif
-#if USEHC
+
 	xTaskCreate(vTaskReceiveHC, "receiveHC",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
-#endif
+
 	xTaskCreate(vTaskMotor, "motor",
 			configMINIMAL_STACK_SIZE + 100, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
@@ -60,12 +69,12 @@ int main(void) {
 	return 1;
 }
 
-#if !USEHC
 static void vTaskReceiveRP(void *pvParameters) {
 	int c = 0;
 	std::string str = "";
 	Command cmd;
 	RPSerial rpSerial;
+	rpSerial.write("AT+C001", strlen("AT+C001"));
 	while(1){
 		c = rpSerial.read();
 		if(c != EOF){
@@ -85,8 +94,7 @@ static void vTaskReceiveRP(void *pvParameters) {
 		}
 	}
 }
-#endif
-#if USEHC
+
 static void vTaskReceiveHC(void *pvParameters) {
 	int c = 0;
 	std::string str = "";
@@ -112,12 +120,12 @@ static void vTaskReceiveHC(void *pvParameters) {
 		}
 	}
 }
-#endif
 
 static void vTaskMotor(void *pvParameters) {
 
 	Command cmd;
-
+	int xPos = CAM_X_CENTER;
+	int yPos = CAM_Y_CENTER;
 	while(1){
 		if(xQueueReceive(cmdQueue, (void*) &cmd, 0)) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
@@ -142,6 +150,19 @@ static void vTaskMotor(void *pvParameters) {
 				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
+			} else if (strcmp(cmd.cmd_type, "caml") == 0){
+				xPos = cameraMoveX(xPos + cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camr") == 0){
+				xPos = cameraMoveX(xPos - cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camu") == 0){
+				yPos = cameraMoveY(yPos - cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camd") == 0){
+				yPos = cameraMoveY(yPos + cmd.count);
+			} else if (strcmp(cmd.cmd_type, "camm") == 0){
+				xPos = cameraMoveX(CAM_X_CENTER);
+			} else if (strcmp(cmd.cmd_type, "camc") == 0){
+				xPos = cameraMoveX(CAM_X_CENTER);
+				yPos = cameraMoveY(CAM_Y_CENTER);
 			}
 		}
 	}
@@ -162,8 +183,72 @@ void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse) {
 		pulse_west = pulse;
 		break;
 	}
-	omnicar.indimove(wheel, dir);
+	omnicar.indiMove(wheel, dir);
 }
+
+void SCT_init(){
+	Chip_SCT_Init(LPC_SCTLARGE0);
+	Chip_SCT_Init(LPC_SCTLARGE1);
+
+	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O, 0,28); //Servox
+	Chip_SWM_MovablePortPinAssign(SWM_SCT1_OUT0_O, 0,14); //Servoy
+
+	LPC_SCTLARGE0->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
+
+	LPC_SCTLARGE0->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
+
+	LPC_SCTLARGE0->MATCHREL[0].L = 20000; // match 0 @ 10/1MHz = 10 usec (100 kHz PWM freq) (1MHz/20000)
+	LPC_SCTLARGE0->MATCHREL[1].L = CAM_X_CENTER; // match 1 used for duty cycle (in 10 steps)
+	LPC_SCTLARGE0->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
+	LPC_SCTLARGE0->EVENT[0].CTRL = (1 << 12); // match 0 condition only
+	LPC_SCTLARGE0->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
+	LPC_SCTLARGE0->EVENT[1].CTRL = (1 << 0) | (1 << 12); // match 1 condition only
+	LPC_SCTLARGE0->OUT[0].SET = (1 << 0); // event 0 will set SCTx_OUT0
+	LPC_SCTLARGE0->OUT[0].CLR = (1 << 1); // event 1 will clear SCTx_OUT0
+	LPC_SCTLARGE0->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
+
+
+	//LPC_SCRLARGE1
+	LPC_SCTLARGE1->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
+	LPC_SCTLARGE1->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
+	LPC_SCTLARGE1->MATCHREL[0].L = 20000; // match 0 @ 10/1MHz = 10 usec (100 kHz PWM freq) (1MHz/1000)
+	LPC_SCTLARGE1->MATCHREL[1].L = 2380; // match 1 used for duty cycle (in 10 steps)
+	LPC_SCTLARGE1->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
+	LPC_SCTLARGE1->EVENT[0].CTRL = (1 << 12); // match 0 condition only
+	LPC_SCTLARGE1->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
+	LPC_SCTLARGE1->EVENT[1].CTRL = (1 << 0) | (1 << 12); // match 1 condition only
+	LPC_SCTLARGE1->OUT[0].SET = (1 << 0); // event 0 will set SCTx_OUT0
+	LPC_SCTLARGE1->OUT[0].CLR = (1 << 1); // event 1 will clear SCTx_OUT0
+	LPC_SCTLARGE1->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
+}
+
+/*	Move the X Servo
+ * 	2450: full left
+ * 	750: full right
+ * 	1500 middle
+ *
+ */
+int cameraMoveX(int pos){
+	if (pos>CAM_X_LEFT) pos = CAM_X_LEFT;
+	if (pos<CAM_X_RIGHT) pos = CAM_X_RIGHT;
+	LPC_SCTLARGE0->MATCHREL[1].L = pos;
+	return pos;
+}
+
+
+/*	Move the Y Servo
+ * 	2380: front
+ * 	1500: top
+ * 	1100: back
+ *
+ */
+int cameraMoveY(int pos){
+	if (pos > CAM_Y_CENTER) pos = CAM_Y_CENTER;
+	if (pos < CAM_Y_UP) pos = CAM_Y_UP;
+	LPC_SCTLARGE1->MATCHREL[1].L = pos;
+	return pos;
+}
+
 
 extern "C" {
 
@@ -225,57 +310,22 @@ void vConfigureTimerForRunTimeStats( void ) {
 	DigitalIoPin inteastpin15(1,0,DigitalIoPin::output,true);//2.5
 	intnorth  0 0
 
-DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin11(0,10,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin12(1,3,DigitalIoPin::output,true);//2.5
-DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
+	DigitalIoPin servo1(0,28,DigitalIoPin::output,true);//2.5
+	DigitalIoPin servo2(0,14,DigitalIoPin::output,true);//2.5
+
+
+	//UART1 RPi
+	DigitalIoPin pin11(0,10,DigitalIoPin::output,true);//2.5
+	DigitalIoPin pin12(1,3,DigitalIoPin::output,true);//2.5
+
+	//UART2 Control
+	DigitalIoPin pin6(0,8,DigitalIoPin::output,true);//2.5
+
+	DigitalIoPin pin5(1,6,DigitalIoPin::output,true);//2.5
+	DigitalIoPin pin13(0,0,DigitalIoPin::output,true);//2.5
+
 DigitalIoPin pin14(0,24,DigitalIoPin::output,true);//0
-
 DigitalIoPin pin16(0,27,DigitalIoPin::output,true);//0
-DigitalIoPin pin17(0,28,DigitalIoPin::output,true);//2.5
 DigitalIoPin pin18(0,12,DigitalIoPin::output,true);//0
-DigitalIoPin pin19(0,14,DigitalIoPin::output,true);//2.5
-
-
  */
-//void SCT_Init(void)
-//{
-//	Chip_SCT_Init(LPC_SCTLARGE0);
-//	LPC_SCTLARGE0->CONFIG |= (1 << 17); // two 16-bit timers, auto limit
-//	LPC_SCTLARGE0->CONFIG |= (1 << 18); // two 16-bit timers, auto limit
-//	LPC_SCTLARGE0->CTRL_L |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
-//	LPC_SCTLARGE0->CTRL_H |= (72-1) << 5; // set prescaler, SCTimer/PWM clock = 1 MHz
-//
-//	LPC_SCTLARGE0->MATCHREL[0].L = 1000-1; // set the max frequency to 1kHz for the SCT1
-//	LPC_SCTLARGE0->MATCHREL[1].L = 500; //
-//	LPC_SCTLARGE0->MATCHREL[0].H = 1000-1; // set the max frequency to 1kHz for the SCT2
-//	LPC_SCTLARGE0->MATCHREL[3].H = 500; //
-//
-//	LPC_SCTLARGE0->EVENT[0].STATE = 0xFFFFFFFF; // event 0 happens in all states
-//	LPC_SCTLARGE0->EVENT[0].CTRL = (1 << 12); // match 0 condition only
-//	LPC_SCTLARGE0->EVENT[1].STATE = 0xFFFFFFFF; // event 1 happens in all states
-//	LPC_SCTLARGE0->EVENT[1].CTRL = (1 << 0) | (1 << 12); // match 1 condition only
-//	LPC_SCTLARGE0->EVENT[2].STATE = 0xFFFFFFFF; // event 0 happens in all states
-//	LPC_SCTLARGE0->EVENT[2].CTRL = (1 << 12) | (1 << 4); // match 1 condition only
-//	LPC_SCTLARGE0->EVENT[3].STATE = 0xFFFFFFFF; // event 1 happens in all states
-//	LPC_SCTLARGE0->EVENT[3].CTRL = (3 << 0) | (1 << 12) | (1 << 4); // match 3 conditions
-//	LPC_SCTLARGE0->OUT[0].SET = (1 << 0); // event 0 will set SCTx_OUT0
-//	LPC_SCTLARGE0->OUT[0].CLR = (1 << 1); // event 1 will clear SCTx_OUT0
-//
-//	LPC_SCTLARGE0->OUT[1].SET = (1 << 0); // event 0 will set SCTx_OUT0
-//	LPC_SCTLARGE0->OUT[1].CLR = (1 << 3); // event 1 will clear SCTx_OUT0
-//
-//	LPC_SCTLARGE0->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
-//	LPC_SCTLARGE0->CTRL_H &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
-//
-//
-//	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O,0,8);
-//	Chip_SWM_MovablePortPinAssign(SWM_SCT0_OUT0_O,1,6);
-//
-//}
-//void PWM_set(int val) {
-//	LPC_SCTLARGE0->MATCHREL[3].L = val;
-//	LPC_SCTLARGE0->MATCHREL[1].L = val;
-//}
 

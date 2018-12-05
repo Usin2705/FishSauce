@@ -36,13 +36,13 @@ void LPC_UARTHNDLR(void)
 
 HCSerial::HCSerial() {
 	/* UART signals on pins PIO0_13 (FUNC0, U0_TXD) and PIO0_18 (FUNC0, U0_RXD) */
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 8, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 1, (IOCON_MODE_INACT | IOCON_DIGMODE_EN));
 	//Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 29, (IOCON_MODE_INACT | IOCON_DIGMODE_EN)); // RTS (for direction control)
 
 	/* UART signal muxing via SWM */
-	Chip_SWM_MovablePortPinAssign(SWM_UART2_RXD_I, 1, 3);  // D6
-	Chip_SWM_MovablePortPinAssign(SWM_UART2_TXD_O, 0, 10); // D4
+	Chip_SWM_MovablePortPinAssign(SWM_UART2_RXD_I, 0, 8);
+	Chip_SWM_MovablePortPinAssign(SWM_UART2_TXD_O, 1, 1);
 	//Chip_SWM_MovablePortPinAssign(SWM_UART1_RTS_O, 0, 29);
 
 
@@ -56,7 +56,7 @@ HCSerial::HCSerial() {
 
 #else
 	/* Use 128x expected UART baud rate for fractional baud mode. */
-	Chip_Clock_SetUARTBaseClockRate((9600 * 128), true);
+	Chip_Clock_SetUARTBaseClockRate((115200 * 128), true);
 #endif
 
 	/* Setup UART */

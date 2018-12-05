@@ -1,5 +1,5 @@
 /*
- * RPSerial.h
+ * HCSerial.h
  *
  *  Created on: Oct 26, 2018
  *      Author: Usin
