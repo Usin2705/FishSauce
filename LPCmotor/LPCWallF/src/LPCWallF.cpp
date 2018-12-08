@@ -46,11 +46,13 @@ void SCT1_SERVO_Init();
 void SCT0_TIMER_Init();
 int cameraMoveX(int pos);
 int cameraMoveY(int pos);
-enum Direction {FORWARD, BACKWARD, GOLEFT, GORIGHT, NONE} direction;
+DIRECTION carDirection;
 double LIMIT_DISTANCE = 15.0;  //measured in cm
+volatile double ARRAYFRONT[3] = {0,0,0};
+volatile double ARRAYBACK[3] = {0,0,0};
 
 int main(void) {
-	cmdQueue = xQueueCreate(4, sizeof(Command));
+	cmdQueue = xQueueCreate(5, sizeof(Command));
 	SCT1_SERVO_Init();
 	SCT0_TIMER_Init();
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
@@ -135,7 +137,7 @@ static void vTaskMotor(void *pvParameters) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
 				xPos = cameraMoveX(CAM_X_LEFT);
 				yPos = cameraMoveY(CAM_Y_CENTER);
-				direction = GOLEFT;
+				carDirection = LEFT;
 				trig.write(true);
 				vTaskDelay(65);
 				trig.write(false);
@@ -144,7 +146,7 @@ static void vTaskMotor(void *pvParameters) {
 			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
 				xPos = cameraMoveX(CAM_X_RIGHT);
 				yPos = cameraMoveY(CAM_Y_CENTER);
-				direction = GORIGHT;
+				carDirection = RIGHT;
 				trig.write(true);
 				vTaskDelay(65);
 				trig.write(false);
@@ -153,14 +155,14 @@ static void vTaskMotor(void *pvParameters) {
 			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
 				xPos = cameraMoveX(CAM_X_CENTER);
 				yPos = cameraMoveY(CAM_Y_CENTER);
-				direction = FORWARD;
+				carDirection = UP;
 				trig.write(true);
 				vTaskDelay(65);
 				trig.write(false);
 				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
 				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
-				direction = BACKWARD;
+				carDirection = DOWN;
 				trig2.write(true);
 				vTaskDelay(65);
 				trig2.write(false);
@@ -354,6 +356,14 @@ void vConfigureTimerForRunTimeStats( void ) {
 	LPC_SCTSMALL1->CTRL_U = SCT_CTRL_PRE_L(255) | SCT_CTRL_CLRCTR_L; // set prescaler to 256 (255 + 1), and start timer
 }
 
+volatile double smallestOfThree(volatile double ARRAY[2]) {
+	if (ARRAY[2] < ARRAY[1]) {
+		return ARRAY[2]<ARRAY[0]?ARRAY[2]:ARRAY[0];
+	} else {
+		return ARRAY[1]<ARRAY[0]?ARRAY[1]:ARRAY[0];
+	}
+}
+
 void SCT0_IRQHandler(void)
 {
 	uint32_t status = LPC_SCT0->EVFLAG;
@@ -369,16 +379,21 @@ void SCT0_IRQHandler(void)
 			time = 4294967295 - LPC_SCT0->CAP[0].U + LPC_SCT0->CAP[1].U;
 		}
 		distanceFront = (double)time*17.0/1000.0;
-		if (distanceFront <=LIMIT_DISTANCE && (direction == FORWARD)) {
+		ARRAYFRONT[2] = ARRAYFRONT[1];
+		ARRAYFRONT[1] = ARRAYFRONT[0];
+		ARRAYFRONT[0] = distanceFront;
+		if (smallestOfThree(ARRAYFRONT) <=LIMIT_DISTANCE && (carDirection == UP)) {
 			pulse_east = 0;
 			pulse_west = 0;
 			omniCar.stopWheel(EAST);
 			omniCar.stopWheel(WEST);
-		} else if (distanceFront <=LIMIT_DISTANCE && (direction == LEFT || direction == RIGHT)) {
+			double a = 0;
+		} else if ((smallestOfThree(ARRAYFRONT)<=(LIMIT_DISTANCE+15.0)) && (carDirection == LEFT || carDirection == RIGHT)) {
 			pulse_north = 0;
 			pulse_south = 0;
 			omniCar.stopWheel(NORTH);
 			omniCar.stopWheel(SOUTH);
+			double a = 0;
 		}
 	}
 	if(status & (1 << 4)) {
@@ -389,7 +404,10 @@ void SCT0_IRQHandler(void)
 			time2 = 4294967295 - LPC_SCT0->CAP[2].U + LPC_SCT0->CAP[3].U;
 		}
 		distanceBack = (double)time2*17.0/1000.0;
-		if (distanceBack <=LIMIT_DISTANCE && direction == BACKWARD) {
+		ARRAYBACK[2] = ARRAYBACK[1];
+		ARRAYBACK[1] = ARRAYBACK[0];
+		ARRAYBACK[0] = distanceBack;
+		if (smallestOfThree(ARRAYBACK) <=LIMIT_DISTANCE && carDirection == DOWN) {
 			pulse_east = 0;
 			pulse_west = 0;
 			omniCar.stopWheel(EAST);
