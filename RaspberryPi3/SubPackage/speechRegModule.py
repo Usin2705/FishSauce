@@ -8,11 +8,23 @@ import RPi.GPIO as GPIO
 from subprocess import Popen, PIPE, STDOUT
 from SubPackage.textVerifyModule import textVerify
 from SubPackage.UartCommunication import UartCommunication
+from SubPackage.ttsModule import tts
 
 # Imports the Google Cloud client library
 from google.cloud import speech
 from google.cloud.speech import enums
 from google.cloud.speech import types
+
+def writeFile(isFollow):
+	try:
+		f = open("isFollow.txt", "w")
+		f.write(str(isFollow))
+		f.close()
+		print ("Write file successfully")
+	except Exception as error:
+		print("error writing file")
+		subprocess.call(["aplay", "disturbance-in-the-force.wav"])
+		print(error)
 
 def transcribe(duration):		
 		filename = os.path.join(os.path.dirname(__file__), '/home/pi/Desktop/FishSauce/', 'speech.wav')
@@ -36,7 +48,7 @@ def transcribe(duration):
 		
 		#read() return a bytes object, then convert it to string using decode
 		soxOutput = p.stdout.read().decode("utf-8")	
-		print(soxOutput)
+		#print(soxOutput)
 		
 		#Maximum  amplitude text increase by 24 to start the value	
 		maxAmpStart = soxOutput.find("Maximum amplitude") + 24
@@ -126,43 +138,46 @@ def listenForCommand(listenTime):
 			success=True 
 		else:
 			return False
-
-		commandtts =  "pico2wave -w tts.wav "						
+			
 		uart = UartCommunication(9600)
-		if (textVerify(command, ["hello", "hi", "my", "fish"])):
-			commandtts+= "\"Hello! How are you?\""
+		if (textVerify(command, ["hello", "hi", "my", "fish"])):			
 			uart.actionGreeting()
-		elif textVerify(command, ["Says", "Say"]) and textVerify(command, ["yes" ,"ok", "agree", "agrees"]):
-			commandtts+= "\"Yes\""
+			tts("Hello! How are you?")
+		elif textVerify(command, ["Says", "Say"]) and textVerify(command, ["yes" ,"ok", "agree", "agrees"]):			
 			uart.actionYes()
-		elif textVerify(command, ["Says", "Say"]) and textVerify(command, ["no","negative", "disagree", "disagrees"]):
-			commandtts+= "\"No\""
+			tts("Yes")
+		elif textVerify(command, ["Says", "Say"]) and textVerify(command, ["no","negative", "disagree", "disagrees"]):			
 			uart.actionNo()
-		elif textVerify(command, ["backward", "back", "out"]):
-			commandtts+= "\"Okie dokie\""
+			tts("No")
+		elif textVerify(command, ["backward", "back", "out"]):			
 			uart.Send_Command_To_LPC("down 200\r\n")
-		elif textVerify(command, ["forward", "come", "here"]):
-			commandtts+= "\"I'm comming\""
+			tts("Okie dokie")
+		elif textVerify(command, ["forward", "come", "here"]):			
 			uart.Send_Command_To_LPC("up 200\r\n")
-		elif textVerify(command, ["turn", "rotate", "done"]) and textVerify(command, ["left"]):			
-			commandtts+= "\"Woof woof\""
+			tts("I'm comming")
+		elif textVerify(command, ["go", "move"]):			
+			uart.Send_Command_To_LPC("up 600\r\n")
+			tts("Woof woof")
+		elif textVerify(command, ["turn", "rotate", "done"]) and textVerify(command, ["left"]):						
 			uart.Send_Command_To_LPC("turnl 95\r\n")
-		elif textVerify(command, ["turn", "rotate", "done"]) and textVerify(command, ["right","flight","white"]):			
-			commandtts+= "\"alright alright\""
+			subprocess.call(["aplay", "WavFiles/01.wav"])
+		elif textVerify(command, ["turn", "rotate", "done"]) and textVerify(command, ["right","flight","white"]):						
 			uart.Send_Command_To_LPC("turnr 95\r\n")
+			subprocess.call(["aplay", "WavFiles/02.wav"])
+		elif textVerify(command, ["what", "what's"]) and textVerify(command, ["name"]):
+			tts("My name is Wall F. At home my parent call me Fish Sauce")
+		elif textVerify(command, ["what"]) and textVerify(command, ["you"]) and (not textVerify(command, ["name"])):
+			tts("I'm an IOT project at Metropolia. I go around the school and streaming video back to the base station. I also using AI technology to recognize voice and face")						
+		elif textVerify(command, ["introduce"]):
+			tts("I'm an IOT project at Metropolia. I go around the school and streaming video back to the base station. I also using AI technology to recognize voice and face")						
+		elif textVerify(command, ["follow", "following", "funny"]) and (not textVerify(command, ["stop"]):	
+			writeFile(True)
+			subprocess.call(["aplay", "WavFiles/I-got-a-bad-feeling-about-this.wav"])			
+		elif textVerify(command, ["stop"]):		
+			writeFile(False)
+			subprocess.call(["aplay", "WavFiles/I-will-be-back.wav"])			
 		else:
-			success = False
-		
-		print(commandtts)
-		if success:
-			#if success then play text to speech:		
-			args = shlex.split(commandtts)
-			subprocess.call (args)
-			# better quality for pico2wave
-			#https://askubuntu.com/questions/853200/improve-sound-not-voice-quality-of-pico2wave-text-to-speech
-			commandtts = "play -qV0 tts.wav treble 24 gain -l 6"
-			args = shlex.split(commandtts)
-			subprocess.call (args)
+			success = False		
 		
 		return success
 		

@@ -26,7 +26,6 @@ class UartCommunication():
 			while True: 
 				ch = win.getch()
 				if ch == curses.KEY_RIGHT:
-					print("RIGHT")
 					ch = 59
 				elif ch == curses.KEY_LEFT:
 					ch = 107
@@ -61,15 +60,15 @@ class UartCommunication():
 				self.Send_Command_To_LPC("turnr 20\r\n")
 		# CAMERA
 		elif str == ";":
-				self.Send_Command_To_LPC("camright 50\r\n")
+				self.Send_Command_To_LPC("camr 50\r\n")
 		elif str == "k": 
-				self.Send_Command_To_LPC("camleft 50\r\n")
+				self.Send_Command_To_LPC("caml 50\r\n")
 		elif str == "o":
-				self.Send_Command_To_LPC("camup 50\r\n")
+				self.Send_Command_To_LPC("camu 50\r\n")
 		elif str == "l":
-				self.Send_Command_To_LPC("camdown 50\r\n")
+				self.Send_Command_To_LPC("camd 50\r\n")
 		elif str == "c":
-				self.Send_Command_To_LPC("camcenter\r\n")
+				self.Send_Command_To_LPC("camc\r\n")
 				
 		# CHANGE MODE
 		elif str == "t":
@@ -81,33 +80,33 @@ class UartCommunication():
 		
 	def actionGreeting(self):
 		for i in range(0,1):
-			self.Send_Command_To_LPC("camup 400\r\n")
-			sleep(0.1)
-			self.Send_Command_To_LPC("camright 200\r\n")
-			sleep(0.1)
-			self.Send_Command_To_LPC("camcenter\r\n")
-			sleep(0.1)
-			self.Send_Command_To_LPC("camup 400\r\n")
-			sleep(0.1)
-			self.Send_Command_To_LPC("camleft 200\r\n")
-			sleep(0.1)
-			self.Send_Command_To_LPC("camcenter\r\n")
+			self.Send_Command_To_LPC("camu 400\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("camr 200\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("camc\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("camu 400\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("caml 200\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("camc\r\n")
 			
 	def actionNo(self):
 		for i in range(0,2):			
-			self.Send_Command_To_LPC("camright 300\r\n")
-			sleep(0.05)
-			self.Send_Command_To_LPC("camcenter\r\n")
-			sleep(0.05)
-			self.Send_Command_To_LPC("camleft 300\r\n")
-			sleep(0.05)			
-			self.Send_Command_To_LPC("camcenter\r\n")
-			sleep(0.05)
+			self.Send_Command_To_LPC("camr 300\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("camc\r\n")
+			sleep(0.2)
+			self.Send_Command_To_LPC("caml 300\r\n")
+			sleep(0.2)			
+			self.Send_Command_To_LPC("camc\r\n")
+			sleep(0.2)
 			
 	def actionYes(self):
 		for i in range(0,3):			
-			self.Send_Command_To_LPC("camup 400\r\n")
-			sleep(0.05)			
-			self.Send_Command_To_LPC("camcenter\r\n")
-			sleep(0.05)
+			self.Send_Command_To_LPC("camu 400\r\n")
+			sleep(0.2)			
+			self.Send_Command_To_LPC("camc\r\n")
+			sleep(0.2)
 

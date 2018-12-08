@@ -31,8 +31,6 @@
 
 // Queue for gcode command structs
 QueueHandle_t cmdQueue;
-QueueHandle_t frontObstacleQueue;
-QueueHandle_t backObstacleQueue;
 volatile uint32_t pulse_north = 0;
 volatile uint32_t pulse_south = 0;
 volatile uint32_t pulse_east = 0;
@@ -44,17 +42,17 @@ static void vTaskReceiveRP(void *pvParameters);
 static void vTaskReceiveHC(void *pvParameters);
 static void vTaskMotor(void *pvParameters);
 void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse);
-void SCT_init();
-void SCT0_Init();
+void SCT1_SERVO_Init();
+void SCT0_TIMER_Init();
 int cameraMoveX(int pos);
 int cameraMoveY(int pos);
+enum Direction {FORWARD, BACKWARD, GOLEFT, GORIGHT, NONE} direction;
+double LIMIT_DISTANCE = 15.0;  //measured in cm
 
 int main(void) {
 	cmdQueue = xQueueCreate(4, sizeof(Command));
-	frontObstacleQueue = xQueueCreate(4, sizeof(bool));
-	backObstacleQueue = xQueueCreate(4, sizeof(bool));
-	SCT_init();
-	SCT0_Init();
+	SCT1_SERVO_Init();
+	SCT0_TIMER_Init();
 	xTaskCreate(vTaskReceiveRP, "receiveRP",
 			configMINIMAL_STACK_SIZE + 350, NULL, (tskIDLE_PRIORITY + 1UL),
 			(TaskHandle_t *) NULL);
@@ -69,6 +67,7 @@ int main(void) {
 
 
 	vTaskStartScheduler();
+
 	return 1;
 }
 
@@ -77,7 +76,6 @@ static void vTaskReceiveRP(void *pvParameters) {
 	std::string str = "";
 	Command cmd;
 	RPSerial rpSerial;
-	rpSerial.write("AT+C001", strlen("AT+C001"));
 	while(1){
 		c = rpSerial.read();
 		if(c != EOF){
@@ -89,7 +87,7 @@ static void vTaskReceiveRP(void *pvParameters) {
 				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
 				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
 				} else {
-					ITM_write("Cannot Send to the Queue\r\n");
+
 				}
 
 				str = "";
@@ -115,7 +113,7 @@ static void vTaskReceiveHC(void *pvParameters) {
 				sscanf(str.c_str(),"%s %d",cmd.cmd_type,&cmd.count);
 				if(xQueueSendToBack(cmdQueue, &cmd, portMAX_DELAY) == pdPASS){
 				} else {
-					ITM_write("Cannot Send to the Queue\r\n");
+
 				}
 
 				str = "";
@@ -129,7 +127,6 @@ static void vTaskMotor(void *pvParameters) {
 	Command cmd;
 	int xPos = CAM_X_CENTER;
 	int yPos = CAM_Y_CENTER;
-	bool isBlocked = false;
 	DigitalIoPin trig(1, 4, DigitalIoPin::output, false);
 	DigitalIoPin trig2(1, 5, DigitalIoPin::output, false);
 
@@ -138,33 +135,37 @@ static void vTaskMotor(void *pvParameters) {
 			if (strcmp(cmd.cmd_type, "left") == 0) {
 				xPos = cameraMoveX(CAM_X_LEFT);
 				yPos = cameraMoveY(CAM_Y_CENTER);
+				direction = GOLEFT;
+				trig.write(true);
+				vTaskDelay(65);
+				trig.write(false);
 				carindimove(omniCar, NORTH, CLOCKWISE, cmd.count);
 				carindimove(omniCar, SOUTH, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "right") == 0)  {
 				xPos = cameraMoveX(CAM_X_RIGHT);
 				yPos = cameraMoveY(CAM_Y_CENTER);
+				direction = GORIGHT;
+				trig.write(true);
+				vTaskDelay(65);
+				trig.write(false);
 				carindimove(omniCar, NORTH, COUNTERCLOCKWISE, cmd.count);
 				carindimove(omniCar, SOUTH, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "up") == 0)  {
 				xPos = cameraMoveX(CAM_X_CENTER);
 				yPos = cameraMoveY(CAM_Y_CENTER);
+				direction = FORWARD;
 				trig.write(true);
 				vTaskDelay(65);
 				trig.write(false);
-				xQueueReceive(frontObstacleQueue, &isBlocked, 10);
-				if(isBlocked == false) {
-					carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
-					carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
-				}
+				carindimove(omniCar, EAST, CLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, COUNTERCLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "down") == 0)  {
+				direction = BACKWARD;
 				trig2.write(true);
 				vTaskDelay(65);
 				trig2.write(false);
-				xQueueReceive(backObstacleQueue, &isBlocked, 10);
-				if(isBlocked == false) {
-					carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
-					carindimove(omniCar, WEST, CLOCKWISE, cmd.count);
-				}
+				carindimove(omniCar, EAST, COUNTERCLOCKWISE, cmd.count);
+				carindimove(omniCar, WEST, CLOCKWISE, cmd.count);
 			} else if (strcmp(cmd.cmd_type, "turnl") == 0)  {
 				carindimove(omniCar, NORTH, CLOCKWISE, cmd.count);
 				carindimove(omniCar, SOUTH, CLOCKWISE, cmd.count);
@@ -214,7 +215,7 @@ void carindimove(OmniCar &omnicar, WHEEL wheel, bool dir, uint32_t pulse) {
 	omnicar.indiMove(wheel, dir);
 }
 
-void SCT_init(){
+void SCT1_SERVO_Init(){
 	Chip_SCT_Init(LPC_SCTLARGE1);
 
 	Chip_SWM_MovablePortPinAssign(SWM_SCT1_OUT0_O, 0,28); //Servox
@@ -243,7 +244,7 @@ void SCT_init(){
 	LPC_SCTLARGE1->CTRL_L &= ~(1 << 2); // unhalt it by clearing bit 2 of CTRL reg
 }
 
-void SCT0_Init()
+void SCT0_TIMER_Init()
 {
 	Chip_INMUX_SelectSCT0Src(0, SCT0_INMUX_PIO1_6);			// SCT2_IN0 at P1_6
 	Chip_INMUX_SelectSCT0Src(1, SCT0_INMUX_PIO1_7);			// SCT2_IN0 at P1_7
@@ -251,10 +252,10 @@ void SCT0_Init()
 	LPC_SYSCON->SYSAHBCLKCTRL[1] |= (1 << 2);                			// enable the SCT0 clock
 	LPC_SCT0->CONFIG           |= (1 << 0);			      			// unified
 
-	LPC_SCT0->CTRL_U        |= (72 << 5);       					// set pre-scaler
+	LPC_SCT0->CTRL_U        |= (72 << 5);       					// set pre-scaler, system clock is 72MHz
 
 	LPC_SCT0->REGMODE_L      = (1 << 0) | (1 << 1)
-													 | (1 << 2) | (1 << 3);        			// CAP 0 and CAP 1
+																											 | (1 << 2) | (1 << 3);        			// CAP 0 and CAP 1
 
 
 	LPC_SCT0->EVENT[1].STATE = 0xFFFFFFFF;                 			// event 1 happens in all states
@@ -280,7 +281,6 @@ void SCT0_Init()
 	LPC_SCT0->EVEN           = (1 << 2) | (1 << 4);        		   			// event 2 generate an irq
 
 	NVIC_EnableIRQ(SCT0_IRQn);                             			// enable SCT0 interrupt
-	NVIC_SetPriority(SCT0_IRQn,1);
 
 	LPC_SCT0->CTRL_U           &= ~(1 << 2);               			// start timer
 }
@@ -357,9 +357,10 @@ void vConfigureTimerForRunTimeStats( void ) {
 void SCT0_IRQHandler(void)
 {
 	uint32_t status = LPC_SCT0->EVFLAG;
-	uint32_t time, time2;
-	bool isBlocked = false;
-	BaseType_t xHigherPriorityTaskWoken;
+	uint32_t time = 0;
+	uint32_t time2 = 0;
+	double distanceFront = 0;
+	double distanceBack = 0;
 	if(status & (1 << 2)) {
 		if(LPC_SCT0->CAP[1].U >= LPC_SCT0->CAP[0].U) {
 			time = LPC_SCT0->CAP[1].U - LPC_SCT0->CAP[0].U;
@@ -367,11 +368,18 @@ void SCT0_IRQHandler(void)
 		else {															//The counter has been reset
 			time = 4294967295 - LPC_SCT0->CAP[0].U + LPC_SCT0->CAP[1].U;
 		}
-		time = (double)time*17.0/1000.0;
-		if(time <= 25.0)
-			isBlocked = true;
-		else isBlocked  = false;
-		xQueueSendFromISR(frontObstacleQueue, &isBlocked, &xHigherPriorityTaskWoken);
+		distanceFront = (double)time*17.0/1000.0;
+		if (distanceFront <=LIMIT_DISTANCE && (direction == FORWARD)) {
+			pulse_east = 0;
+			pulse_west = 0;
+			omniCar.stopWheel(EAST);
+			omniCar.stopWheel(WEST);
+		} else if (distanceFront <=LIMIT_DISTANCE && (direction == LEFT || direction == RIGHT)) {
+			pulse_north = 0;
+			pulse_south = 0;
+			omniCar.stopWheel(NORTH);
+			omniCar.stopWheel(SOUTH);
+		}
 	}
 	if(status & (1 << 4)) {
 		if(LPC_SCT0->CAP[3].U >= LPC_SCT0->CAP[2].U) {
@@ -380,11 +388,13 @@ void SCT0_IRQHandler(void)
 		else {															//The counter has been reset
 			time2 = 4294967295 - LPC_SCT0->CAP[2].U + LPC_SCT0->CAP[3].U;
 		}
-		time2 = (double)time2*17.0/1000.0;
-		if(time2 <= 25.0)
-			isBlocked = true;
-		else isBlocked  = false;
-		xQueueSendFromISR(backObstacleQueue, &isBlocked, &xHigherPriorityTaskWoken);
+		distanceBack = (double)time2*17.0/1000.0;
+		if (distanceBack <=LIMIT_DISTANCE && direction == BACKWARD) {
+			pulse_east = 0;
+			pulse_west = 0;
+			omniCar.stopWheel(EAST);
+			omniCar.stopWheel(WEST);
+		}
 	}
 
 	LPC_SCT0->EVFLAG = status;                         				// clear interrupt

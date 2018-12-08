@@ -12,36 +12,55 @@ import time
 import cv2
 import subprocess
 from SubPackage.UartCommunication import UartCommunication
+from SubPackage.ttsModule import tts
 
 def scanForNhan(stepLeft, stepRight, stepUp, isScanned, uart):
 	if (stepLeft == 0) and (stepRight==0):
 		uart.Send_Command_To_LPC("camc \r\n")
-		count= 100*stepUp	
+		count= 70*stepUp
 		uart.Send_Command_To_LPC("camu " +str(count)+ " \r\n")
 		time.sleep(0.1)
 		stepUp+=1
-	
-		if stepUp >= 7:
+
+		if stepUp >= 12:
 			isScanned = True
-	
-	if (stepLeft <=3):
-		count = 100*stepLeft
+			uart.Send_Command_To_LPC("camc \r\n")
+
+	if (stepLeft <=6):
+		count = 50*stepLeft
 		uart.Send_Command_To_LPC("caml " +str(count)+ " \r\n")
 		time.sleep(0.1)
 		stepLeft+=1
 	else:
-		count = 100*stepRight	
+		count = 50*stepRight
 		uart.Send_Command_To_LPC("camr " +str(count)+ " \r\n")
 		time.sleep(0.1)
 		stepRight+=1
-		
-	if (stepRight == 6):
+
+	# if finish scan and can't find my face
+	if (stepRight == 12):
 		stepLeft=0
 		stepRight=0
-		
+
 	return stepLeft, stepRight, stepUp, isScanned
+	
+def scanFollowingNhan(isScanned, uart):
+	uart.Send_Command_To_LPC("camf\r\n") #caml will move to 1500 X and 1700 Y: Center
+	time.sleep(0.1)
+	
+def readFile():
+	try:
+		f = open("isFollow.txt")
+		line = f.readline()		
+		#print(line)
+		f.close()
+		return line
+	except Exception as error:
+		print("error reading file")
+		#print(error)
 
 def faceRegconition():
+	
 	# construct the argument parser and parse the arguments
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-c", "--cascade", default = "haarcascade_frontalface_default.xml",
@@ -68,30 +87,34 @@ def faceRegconition():
 	# start the FPS counter
 	fps = FPS().start()
 	startTime = time.time()
-	
+	startTimeNhanTran = time.time() - 60
+	startTimeJingXuan = time.time() - 60
+	startTimeJoe = time.time() - 60
 	stepLeft = 0
 	stepRight = 0
 	stepUp = 0
 	isScanned = False
 	isSaid = False
-	countForDetect = 0	                      
+	#make the camera stay at 1 position at least 3 times
+	countForDetect = 0
 	uart = UartCommunication(9600)
-	
+
 	# loop over frames from the video file stream
 	while True:
+		isFollow = (readFile()=="True")
 		countForDetect+=1
 		# grab the frame from the threaded video stream and resize it
 		# to 500px (to speedup processing)
 		frame = vs.read()
 		frame = imutils.resize(frame, width=400)
-		
+
 		# convert the input frame from (1) BGR to grayscale (for face
 		# detection) and (2) from BGR to RGB (for face recognition)
 		gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 		rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
 		# detect faces in the grayscale frame
-		rects = detector.detectMultiScale(gray, scaleFactor=1.1, 
+		rects = detector.detectMultiScale(gray, scaleFactor=1.1,
 			minNeighbors=5, minSize=(30, 30),
 			flags=cv2.CASCADE_SCALE_IMAGE)
 
@@ -130,7 +153,7 @@ def faceRegconition():
 				# of votes (note: in the event of an unlikely tie Python
 				# will select first entry in the dictionary)
 				name = max(counts, key=counts.get)
-			
+
 			# update the list of names
 			names.append(name)
 
@@ -142,61 +165,103 @@ def faceRegconition():
 			y = top - 15 if top - 15 > 15 else top + 15
 			xAdjust = (right + left)
 			yAdjust = (top + bottom)
-			cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
-				0.75, (0, 255, 0), 2)
-			
-			if name=="NhanPhan":
-				if (isSaid):					
-					subprocess.call(["aplay", "WavFiles/hello-there.wav"])
-				stepLeft = 0
-				stepRight = 0
-				stepUp = 0
-				isScanned = False
-				isSaid = False
-				startTime = time.time()  
-				#based on 800x600
-				#800->950
-				if (xAdjust) > 575:
-						uart.Send_Command_To_LPC("camr 100\r\n")
-						time.sleep(0.05)   
-				elif (xAdjust) > 475:
-						uart.Send_Command_To_LPC("camr 40\r\n")
-						time.sleep(0.05)
-				elif (xAdjust) < 225:
-						uart.Send_Command_To_LPC("caml 100\r\n")
-						time.sleep(0.05)
-				elif (xAdjust) < 325:
-						uart.Send_Command_To_LPC("caml 40\r\n")
-						time.sleep(0.05)
-				#600->700
-				if (yAdjust) > 450:
-						uart.Send_Command_To_LPC("camd 100\r\n")
-						time.sleep(0.05)    
-				elif (yAdjust) > 350:
-						uart.Send_Command_To_LPC("camd 40\r\n")
-						time.sleep(0.05)
-				elif (yAdjust) < 180:
-						uart.Send_Command_To_LPC("camu 100\r\n")
-						time.sleep(0.05)
-				elif (yAdjust) < 250:
-						uart.Send_Command_To_LPC("camu 40\r\n")
-						time.sleep(0.05)
+			cv2.putText(frame, str(right) +"," + str(left)+ name, (left, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+			if name=="Joe":
+				if(time.time()-startTimeJoe) >= 60:
+					tts("Hello Joseph Hotchkiss!")
+				startTimeJoe = time.time()
+				
+			if name=="NhanTran":
+				if(time.time()-startTimeNhanTran) >= 60:
+					tts("Hello Mistern Yann Tran!")
+				startTimeNhanTran = time.time()
+				
+			if name=="JingxuanWu":
+				if(time.time()-startTimeJingXuan) >= 60:
+					tts("Hello Jing shwan!")
+				startTimeJingXuan = time.time()
 
-							
+			if name=="NhanPhan":
+				if (not isFollow):
+					if (isSaid):
+						subprocess.call(["aplay", "WavFiles/hello-there.wav"])
+					stepLeft = 0
+					stepRight = 0
+					stepUp = 0
+					isScanned = False
+					isSaid = False
+					startTime = time.time()
+					#based on 800x600
+					#800->950
+					if (xAdjust) > 575:
+							uart.Send_Command_To_LPC("camr 100\r\n")
+							time.sleep(0.05)
+					elif (xAdjust) > 475:
+							uart.Send_Command_To_LPC("camr 40\r\n")
+							time.sleep(0.05)
+					elif (xAdjust) < 225:
+							uart.Send_Command_To_LPC("caml 100\r\n")
+							time.sleep(0.05)
+					elif (xAdjust) < 325:
+							uart.Send_Command_To_LPC("caml 40\r\n")
+							time.sleep(0.05)
+					#600->700
+					if (yAdjust) > 450:
+							uart.Send_Command_To_LPC("camd 100\r\n")
+							time.sleep(0.05)
+					elif (yAdjust) > 350:
+							uart.Send_Command_To_LPC("camd 40\r\n")
+							time.sleep(0.05)
+					elif (yAdjust) < 180:
+							uart.Send_Command_To_LPC("camu 100\r\n")
+							time.sleep(0.05)
+					elif (yAdjust) < 250:
+							uart.Send_Command_To_LPC("camu 40\r\n")
+							time.sleep(0.05)
+				else:
+					if (xAdjust) > 575:
+							uart.Send_Command_To_LPC("turnr 8\r\n")
+							time.sleep(0.05)
+					elif (xAdjust) > 475:
+							uart.Send_Command_To_LPC("turnr 4\r\n")
+							time.sleep(0.05)
+					elif (xAdjust) < 225:
+							uart.Send_Command_To_LPC("turnl 8\r\n")
+							time.sleep(0.05)
+					elif (xAdjust) < 325:
+							uart.Send_Command_To_LPC("turnl 4\r\n")
+							time.sleep(0.05)
+					#600->700
+					if (yAdjust) > 450:
+							#uart.Send_Command_To_LPC("down 10\r\n")
+							time.sleep(0.05)
+					elif (yAdjust) > 350:
+							#uart.Send_Command_To_LPC("down 5\r\n")
+							time.sleep(0.05)
+					elif (yAdjust) > 400:
+							uart.Send_Command_To_LPC("up 800\r\n")
+							time.sleep(0.05)
+					elif (yAdjust) > 250:
+							uart.Send_Command_To_LPC("up 400\r\n")
+							time.sleep(0.05)
+
+
 		elapsedTime = time.time() - startTime
 		
-		if (elapsedTime > 30) and (not isScanned) and (countForDetect >=3):	
-			countForDetect = 0
-			if (not isSaid):
-				subprocess.call(["/usr/bin/amixer", "cset", "numid=1", "100%"])
-				subprocess.call(["aplay", "WavFiles/I-will-look-for-you.wav"])
+		if (not isFollow):
+			if (elapsedTime > 30) and (not isScanned) and (countForDetect >=3):
+				countForDetect = 0
+				if (not isSaid):
+					subprocess.call(["/usr/bin/amixer", "cset", "numid=1", "100%"])
+					subprocess.call(["aplay", "WavFiles/I-will-look-for-you.wav"])
 
-				isSaid = True
-			stepLeft, stepRight, stepUp, isScanned = scanForNhan(stepLeft, stepRight, stepUp, isScanned, uart)
-		
-		#If finish and can't find my face
-		if (isScanned):
-			uart.Send_Command_To_LPC("camc\r\n")
+					isSaid = True
+				stepLeft, stepRight, stepUp, isScanned = scanForNhan(stepLeft, stepRight, stepUp, isScanned, uart)
+		else:
+			if (elapsedTime > 30) and (not isScanned) and (countForDetect >=3):
+				countForDetect = 0
+				isScanned = scanFollowingNhan(isScanned, uart)
+
 		# display the image to our screen
 		cv2.imwrite("camera.jpg", frame)
 		cv2.imshow("Frame", frame)
@@ -217,6 +282,6 @@ def faceRegconition():
 	# do a bit of cleanup
 	cv2.destroyAllWindows()
 	vs.stop()
-	
+
 if __name__ == "__main__":
-	faceRegconition()
+	faceRegconition(True)
