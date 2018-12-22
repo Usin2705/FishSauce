@@ -11,7 +11,7 @@ Link to the Raspberry Pi3 codes, which contain several sub packages (UartCommuni
 <p>
 Repository also contains other features. Some which we wanted to implement but were not finished due to time constraint (such as BLE indoor positioning).
 
-#License
+# License
 
 Copyright 2018
 
