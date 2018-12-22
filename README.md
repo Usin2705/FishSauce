@@ -7,8 +7,7 @@ Team members: Nhan Tran, JingXuan Wu, Nhan Phan.
 <p>
 <b>Intro video</b>
 <p>
-[![Fibonacci RMI Java EE](http://img.youtube.com/vi/nX_inqaAzOI/0.jpg)](https://www.youtube.com/watch?v=nX_inqaAzOI&feature=youtu.be&hd=1 "RMI Fibonacci Java")
-<p>
+https://www.youtube.com/watch?v=Oxn9pmZXiwQ&list=PLHcXmug1s89bWRLCf-zW4T0iRo7G2nk0q
 <p>
 Link to the LPC1549 codes, which handle the commands sent from Raspberry Pi 3, commands from HC-12 wireless module, control the motors, camera and ultrasonic sensor: https://github.com/Usin2705/FishSauce/tree/master/LPCmotor
 <p>
