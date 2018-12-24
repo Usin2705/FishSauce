@@ -7,7 +7,36 @@ Team members: Nhan Tran, JingXuan Wu, Nhan Phan.
 <p>
 <b>Intro video</b>
 <p>
-https://www.youtube.com/watch?v=Oxn9pmZXiwQ&list=PLHcXmug1s89bWRLCf-zW4T0iRo7G2nk0q
+
+[![Watch the video](https://img.youtube.com/vi/Oxn9pmZXiwQ/hqdefault.jpg)](https://youtu.be/Oxn9pmZXiwQ)
+
+<p>   
+<b>Voice recognition</b>
+<p>
+
+[![Watch the video](https://img.youtube.com/vi/FwI58awtriI/hqdefault.jpg)](https://youtu.be/FwI58awtriI)
+
+<p>
+<b>Voice command</b>
+<p>
+
+[![Watch the video](https://img.youtube.com/vi/IM_iczHviLY/hqdefault.jpg)](https://youtu.be/IM_iczHviLY)
+
+<p>
+<b>Face Recognition</b>
+<p>
+
+[![Watch the video](https://img.youtube.com/vi/Zycl3cfg9Co/hqdefault.jpg)](https://youtu.be/Zycl3cfg9Co)
+
+<p>
+<b>Face Following</b>
+<p>
+
+[![Watch the video](https://img.youtube.com/vi/7ia6n6tgUho/hqdefault.jpg)](https://youtu.be/7ia6n6tgUho)
+
+<p>
+   
+   
 <p>
 Link to the LPC1549 codes, which handle the commands sent from Raspberry Pi 3, commands from HC-12 wireless module, control the motors, camera and ultrasonic sensor: https://github.com/Usin2705/FishSauce/tree/master/LPCmotor
 <p>
