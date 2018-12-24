@@ -55,13 +55,13 @@ void loop() {
   // If not press the joystick button
   if (digitalRead(joystick_button)) {
     if (xAnalog >= 900) {
-      Serial.println("right 20");
+      Serial.println("right 40");
     } else if (xAnalog >= 600) {
-      Serial.println("right 5");
+      Serial.println("right 10");
     } else if (xAnalog <= 100) {
-      Serial.println("left 20");
+      Serial.println("left 40");
     } else if (xAnalog <= 400) {
-      Serial.println("left 5");
+      Serial.println("left 10");
     }
   // If press the joystick button
   } else {
@@ -79,13 +79,13 @@ void loop() {
   int yAnalog = analogRead(joystick_axis_y);
   //Serial.println(yAnalog);
   if (yAnalog >= 900) {
-      Serial.println("up 20");
+      Serial.println("up 40");
     } else if (yAnalog >= 600) {
-      Serial.println("up 5");
+      Serial.println("up 10");
     } else if (yAnalog <= 100) {
-      Serial.println("down 20");
+      Serial.println("down 40");
     } else if (yAnalog <= 400) {
-      Serial.println("down 5");
+      Serial.println("down 10");
     }
 
 
