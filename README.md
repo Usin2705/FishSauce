@@ -35,6 +35,12 @@ Team members: Nhan Tran, JingXuan Wu, Nhan Phan.
 [![Watch the video](https://img.youtube.com/vi/7ia6n6tgUho/hqdefault.jpg)](https://youtu.be/7ia6n6tgUho)
 
 <p>
+<b>Streaming to TV</b>
+<p>
+
+[![Watch the video](https://img.youtube.com/vi/W5ZhVK1BvL4/hqdefault.jpg)](https://youtu.be/W5ZhVK1BvL4)
+
+<p>
    
    
 <p>
@@ -43,6 +49,13 @@ Link to the LPC1549 codes, which handle the commands sent from Raspberry Pi 3, c
 Link to the Raspberry Pi3 codes, which contain several sub packages (UartCommunication: Uart communication with LPC1549, camModule: handle the face regconition, speechRegModule: handle the connection with Google Cloud Service and handle the voice control from users, ttsModule: allow Wall-F to speak using a mini speaker, and textVerifyModule: utility modules help with the voice regconition): https://github.com/Usin2705/FishSauce/tree/master/RaspberryPi3. All sub packages are then grouped together and run with multiprocessing library in Python. Heavy modules (voice regconition and face regconition) are run using bash script startVoiceCam.sh, other modules is run via startMotor.sh.
 <p>
 Repository also contains other features. Some which we wanted to implement but were not finished due to time constraint (such as BLE indoor positioning).
+   
+<b>Schematic</b>
+<p>
+
+[![Schematic](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Schematic.jpg)](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Schematic.jpg)
+
+
 
 # License
 
