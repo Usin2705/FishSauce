@@ -53,7 +53,7 @@ Repository also contains other features. Some which we wanted to implement but w
 <b>Schematic</b>
 <p>
 
-[![Schematic](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Schematic.jpg)](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Schematic.jpg)
+[![Schematic](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Schematic.jpg)](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Wall-F_mainboard_schematic.pdf)
 
 
 
