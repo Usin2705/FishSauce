@@ -10,8 +10,11 @@ Team members: Nhan Tran, JingXuan Wu, Nhan Phan.
 Hardware:  
 Raspberry Pi3 B+ (with RPi camera module, microphone, mini speaker). Powered by power bank.  
 LPC1549 LPCXpresso board (with 2 Ultrasonic Sensors, 2 Servo Motors, 2 L298N Motor Drivers, 1 HC-12 Wireless Serial Port Communication Module, 1 LED). Powered by power bank.  
+
 4 Omni Wheels with 4 9V DC motors (with Hall Sensor), steel frames, wood frames with laser engraved (from another Metropolia school project), switches, 3D printed mount, steel hinge. Powered by 8 1.2V, 2800mAh Ni-MH batteries.  
+
 Funduino Joystick Shield (not showed in the video) with HC-12 Wireless Serial Port Communication Module. Powered by 9V battery.  
+
 3 ESP32 LOLIN D32 Pro V2.0.0 (not showed in the video). Intended to be used as BLE beacons for indoor positioning, but not managed to including it in the end of the course (worked but need a lot of improvements).  
 
 <p>  
@@ -20,7 +23,11 @@ Funduino Joystick Shield (not showed in the video) with HC-12 Wireless Serial Po
 [![Watch the video](https://img.youtube.com/vi/FwI58awtriI/hqdefault.jpg)](https://youtu.be/FwI58awtriI)  
 
 RPi captures the voice command via microphone, save it as a "wav" file. The file then uploaded to Google Cloud, using Google Cloud Speech-to-Text to translate the voice to text strings. RPi receives the text strings from Google Cloud and processing the text string to identify the correct command. RPi reply using mini speakek, and send command to LPC1549 via Uart.  
+
 Because the time to upload the "wav" file and then received the text string back is long (due to internet speed and Google's processing speed), we used 1 LED to indicate the robot is "thinking".  
+
+Note: due to Google Cloud Speech-to-Text is a paid service (only free for 1,000 requests/month), a mini switch is used to toogle on/off this Voice recognition module. 
+
 In the video you can see that Wall-F recognnizes the voice command from our team member and reply back.  
 
 <p>
