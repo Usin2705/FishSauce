@@ -1,0 +1,26 @@
+.title KiCad schematic
+J1 NC_01 NC_02 5VU1 Earth NC_03 NC_04 north motor
+J2 NC_05 NC_06 5VU1 Earth NC_07 NC_08 south motor
+J3 NC_09 NC_10 5VU2 Earth NC_11 NC_12 east motor
+J4 NC_13 NC_14 5VU2 Earth NC_15 NC_16 west motor
+A1 NC_17 NC_18 NC_19 NC_20 5VU2 Earth Earth NC_21 NC_22 NC_23 NC_24 NC_25 NC_26 NC_27 NC_28 NC_29 NC_30 NC_31 NC_32 NC_33 NC_34 NC_35 NC_36 NC_37 NC_38 NC_39 NC_40 NC_41 Earth NC_42 NC_43 NC_44 LPCXpresso1549
+U2 12V Earth 5VU2 NC_45 NC_46 NC_47 NC_48 NC_49 NC_50 NC_51 NC_52 L298module
+J5 Earth 12V Input from battery
+U1 12V Earth 5VU1 NC_53 NC_54 NC_55 NC_56 NC_57 NC_58 NC_59 NC_60 L298module
+J15 5VU1 Earth NC_61 NC_62 NC_63 HC12 module
+J8 5VU2 NC_64 NC_65 Earth ultrasonic front
+J11 5VU2 NC_66 NC_67 Earth ultrasonic rear
+J6 Earth 5VU3 NC_68 servo_updown
+J7 Earth 5VU3 NC_69 servo_leftright
+U3 12V Earth 5VU3 L7805
+C1 12V Earth 0.33uF
+C2 5VU3 Earth 104 ceramic cap
+D1 Net-_D1-Pad1_ 5VU3 LED
+R1 Net-_D1-Pad1_ Earth 1k
+J12 NC_70 NC_71 Pi's UART
+J16 NC_72 P1_1 LPC's TX
+J9 NC_73 P1_4 trig front
+J10 NC_74 P1_6 echo front
+J13 NC_75 P1_5 trig rear
+J14 NC_76 P1_7 echo rear
+.end
