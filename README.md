@@ -28,7 +28,7 @@ Because the time to upload the "wav" file and then received the text string back
 
 Note: due to Google Cloud Speech-to-Text is a paid service (only free for 1,000 requests/month), a mini switch is used to toogle on/off this Voice recognition module. 
 
-In the video you can see that Wall-F recognnizes the voice command from our team member and reply back.  
+In the video you can see that Wall-F recognizes the voice command from our team member and reply back.  
 
 <p>
 <b>Voice command</b>  
@@ -39,13 +39,17 @@ In this video Wall-F move according to the command from user.
 
 <p>
 <b>Face Recognition</b>  
-
+   
+<p>  
+   
+<img src="https://github.com/Usin2705/FishSauce/blob/master/DataSheet/sampleImage.png" width="480">
+   
 [![Watch the video](https://img.youtube.com/vi/Zycl3cfg9Co/hqdefault.jpg)](https://youtu.be/Zycl3cfg9Co)  
 
 
 <p>
 <b>Face Following</b>  
-
+  
 [![Watch the video](https://img.youtube.com/vi/7ia6n6tgUho/hqdefault.jpg)](https://youtu.be/7ia6n6tgUho)  
 
 <p>
