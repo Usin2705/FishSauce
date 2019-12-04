@@ -12,3 +12,4 @@ RaspberryPi3/SubPackage/__pycache__/
 *.wav
 LPCMotor/usb_cdc/Debug/
 RaspberryPi3/camera.jpg
+*.log
