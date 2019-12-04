@@ -63,12 +63,19 @@ Link to the LPC1549 codes, which handle the commands sent from Raspberry Pi 3, c
   
 Link to the Raspberry Pi3 codes, which contain several sub packages (UartCommunication: Uart communication with LPC1549, camModule: handle the face regconition, speechRegModule: handle the connection with Google Cloud Service and handle the voice control from users, ttsModule: allow Wall-F to speak using a mini speaker, and textVerifyModule: utility modules help with the voice regconition): https://github.com/Usin2705/FishSauce/tree/master/RaspberryPi3. All sub packages are then grouped together and run with multiprocessing library in Python. Heavy modules (voice regconition and face regconition) are run using bash script startVoiceCam.sh, other modules is run via startMotor.sh.  
   
-Repository also contains other features. Some which we wanted to implement but were not finished due to time constraint (such as BLE indoor positioning).  
+Repository also contains other features. Some which we wanted to implement but were not finished due to time constraint. BLE indoor positioning is one of those. While we managed to make it work, its accuracy did not satisfy our requirement. And we did not have time to make adjustment (or experimenting with others BLE device) to improve it.
    
 <b>Schematic</b>  
 
 [![Schematic](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Schematic.jpg)](https://github.com/Usin2705/FishSauce/blob/master/DataSheet/Wall-F_mainboard_schematic.pdf)
 
+Actual PCB, this was done much later after our project, as our PCB machine was broken at the time. And we do not have enough budget and time for the PCB. The PCBs here are made by https://jlcpcb.com/, and they arrived near the summer of 2019.
+
+<img src="https://github.com/Usin2705/FishSauce/blob/master/DataSheet/PCB_two_sides.jpg" width="480">
+
+Excellent work from my teammate in designing the PCB. It has no big error when we connect all the cables, LEDs and Buttons. Our Wall-F look a lot nicer than before.
+
+<img src="https://github.com/Usin2705/FishSauce/blob/master/DataSheet/FishSauce_and_PCB.jpg" width="480">
   
 
 # License
